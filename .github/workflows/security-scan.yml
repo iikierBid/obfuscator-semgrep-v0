@@ -62,13 +62,8 @@ jobs:
             --form verified=true \
             --form product_type_name="poc-apps"
 
-      - name: Fail pipeline if blocking findings are found
-        if: steps.sarif_file_check.outputs.exists == 'true'
+      - name: Check scan conclusion
+        if: steps.semgrep_scan.conclusion == 'failure'
         run: |
-          BLOCKING_FINDINGS=$(jq '[.runs[0].results[] | select(.properties.metadata.severity == "ERROR")] | length' semgrep-results.sarif)
-          if [ "$BLOCKING_FINDINGS" -gt 0 ]; then
-            echo "::error::Found $BLOCKING_FINDINGS blocking findings. Failing the workflow."
-            exit 1
-          else
-            echo "No blocking findings found."
-          fi
+          echo "::error::Semgrep scan found blocking issues. Failing the workflow."
+          exit 1
