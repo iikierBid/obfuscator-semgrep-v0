@@ -48,21 +48,20 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      # Passo 3: Fazer o upload dos resultados para o DefectDojo.
-      # Este passo usa a ferramenta 'curl' para enviar o arquivo SARIF para a API do DefectDojo.
-      # A condição 'if: always()' garante que este passo sempre será tentado, mesmo que o anterior falhe.
       - name: Upload to DefectDojo
         if: steps.sarif_file_check.outputs.exists == 'true'
-        uses: defectdojo/defectdojo-action@v1
-        with:
-          defectdojo_url: ${{ secrets.DEFECTDOJO_URL }}
-          defectdojo_api_key: ${{ secrets.DEFECTDOJO_API_KEY }}
-          product_name: "obfuscator-poc"
-          engagement_name: "CI/CD Scan"
-          scan_type: "SARIF"
-          file_path: "semgrep-results.sarif"
-          auto_create_context: true
-          product_type_name: "poc-apps"
+        run: |
+          curl --request POST \
+            --url "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+            --header "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+            --form scan_type="SARIF" \
+            --form product_name="obfuscator-poc" \
+            --form engagement_name="CI Scan - Run ${{ github.run_id }}" \
+            --form auto_create_context=true \
+            --form file=@"semgrep-results.sarif" \
+            --form verified=true \
+            --form product_type_name="poc-apps"
+
 
       # Passo final para garantir que o status do workflow reflita o resultado do scan.
       - name: 'Check for scan issues'
