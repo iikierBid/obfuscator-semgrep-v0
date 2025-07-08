@@ -33,6 +33,7 @@ jobs:
       # continue-on-error: true é vital. Como o Semgrep retorna código '1' se encontra algo, isso impediria os próximos passos de rodarem.
       # Com esta flag, o job continua mesmo se a análise "falhar", garantindo que sempre tentemos fazer o upload dos resultados.
       - name: 'Run Semgrep Scan'
+        id: semgrep_scan # Adiciona um ID para que possamos referenciar o resultado deste passo
         continue-on-error: true
         run: |
           docker run --rm -v "${PWD}:/src" -w /src returntocorp/semgrep \
@@ -42,7 +43,7 @@ jobs:
       # Este passo usa a ferramenta 'curl' para enviar o arquivo SARIF para a API do DefectDojo.
       # A condição 'if: always()' garante que este passo sempre será tentado, mesmo que o anterior falhe.
       - name: 'Upload to DefectDojo'
-        if: always()
+        if: always() # Garante que este passo sempre será tentado
         run: |
           curl --request POST \
             --url '${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/' \
@@ -50,5 +51,13 @@ jobs:
             --form 'scan_type="Semgrep"' \
             --form 'product_name="obfuscator-poc"' \
             --form 'engagement_name="CI Scan - Run ${{ github.run_id }}"' \
+            --form 'auto_create_context=true' \
             --form 'file=@semgrep-results.sarif' \
-            --form 'verified=true' 
+            --form 'verified=true'
+
+      # Passo final para garantir que o status do workflow reflita o resultado do scan.
+      - name: 'Check for scan issues'
+        if: steps.semgrep_scan.outcome == 'failure'
+        run: |
+          echo "::error::Semgrep scan found blocking issues. Failing the workflow."
+          exit 1 
