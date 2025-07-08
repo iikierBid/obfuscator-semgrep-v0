@@ -8,15 +8,14 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  scan:
+  semgrep-sast-scan:
     runs-on: ubuntu-latest
-    name: 1. Run Security Scan
-    outputs:
-      scan_conclusion: ${{ steps.semgrep_scan.conclusion }}
+    name: Semgrep SAST Scan
     permissions:
       security-events: write
       contents: read
-      
+      pull-requests: write # Necessário para adicionar o comentário no PR
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,42 +27,24 @@ jobs:
         run: |
           pip install semgrep
           semgrep ci --config="p/security-audit" --config="p/owasp-top-ten" --config="p/cwe-top-25" --config="auto" --sarif --output="semgrep.sarif"
-        continue-on-error: true
           
-      - name: Upload SARIF report
+      - name: Upload SARIF report to GitHub Security
+        # Executa sempre, mas só terá efeito se o arquivo for gerado.
+        # Principalmente útil para visualizar os resultados na aba "Security".
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
         if: always()
 
-  security_gate:
-    runs-on: ubuntu-latest
-    name: 2. Check Security Gate
-    needs: scan
-    permissions:
-      pull-requests: write # Apenas para o comentário
-      
-    steps:
-      - name: Check for critical findings
-        if: needs.scan.outputs.scan_conclusion == 'failure'
-        run: |
-          echo "::error::O pipeline foi abortado! O scan de segurança encontrou vulnerabilidades críticas/altas."
-          echo "Verifique os resultados do job '1. Run Security Scan' e a aba 'Security' para mais detalhes."
-          exit 1
-      
-      - name: Approve security gate
-        if: needs.scan.outputs.scan_conclusion != 'failure'
-        run: echo "Nenhuma vulnerabilidade crítica encontrada. Análise de segurança aprovada."
-
-      - name: Comment PR with results
-        # Comenta apenas se o scan falhou e for um evento de PR
-        if: needs.scan.outputs.scan_conclusion == 'failure' && github.event_name == 'pull_request'
+      - name: Comment PR on Failure
+        # Executa apenas se um passo anterior falhou E o evento é um pull request.
+        if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const body = `## ❌ Falha na Análise de Segurança (SAST)
             
-            **O pipeline foi bloqueado** devido a vulnerabilidades críticas ou de alta severidade.
+            **O merge foi bloqueado** devido a vulnerabilidades críticas ou de alta severidade encontradas pelo Semgrep.
             
             📋 Verifique os detalhes na aba [Security](https://github.com/${{ github.repository }}/security/code-scanning) do repositório para entender e corrigir os problemas.
             
@@ -78,12 +59,12 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
-
+            
   build-and-deploy:
     runs-on: ubuntu-latest
-    name: 3. Build and Deploy
-    needs: security_gate # Agora depende do portão de segurança
-    if: github.ref == 'refs/heads/main'
+    name: Build and Deploy
+    needs: [semgrep-sast-scan] # Agora depende do job de scan unificado
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
       
