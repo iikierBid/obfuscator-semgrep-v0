@@ -40,9 +40,9 @@ jobs:
 
       # Passo 3: Fazer o upload dos resultados para o DefectDojo.
       # Este passo usa a ferramenta 'curl' para enviar o arquivo SARIF para a API do DefectDojo.
-      # Ele só será executado se o passo anterior tiver gerado o arquivo de resultados.
+      # A condição 'if: always()' garante que este passo sempre será tentado, mesmo que o anterior falhe.
       - name: 'Upload to DefectDojo'
-        if: always() && (steps.semgrep_scan.outcome == 'success' || steps.semgrep_scan.outcome == 'failure')
+        if: always()
         run: |
           curl --request POST \
             --url '${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/' \
