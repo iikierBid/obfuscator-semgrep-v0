@@ -22,12 +22,10 @@ rules:
             - pattern-regex: '.{8,}'
     message: |
       Possível credencial hardcoded detectada.
-      
       Riscos de segurança:
       - Exposição de credenciais no código-fonte
       - Acesso não autorizado a sistemas
       - Dificuldade de rotação de credenciais
-      
       Melhores práticas:
       - Use variáveis de ambiente para credenciais
       - Implemente gerenciamento de segredos (HashiCorp Vault, AWS Secrets Manager)
@@ -48,10 +46,8 @@ rules:
     message: |
       Possível segredo de alta entropia detectado.
       Um valor com alta aleatoriedade foi encontrado, o que é característico de chaves de API, tokens e outras credenciais.
-      
       Riscos:
       - Exposição de credenciais que dão acesso a sistemas críticos.
-      
       Ação Recomendada:
       - Verifique se este valor é realmente um segredo.
       - Se for, remova-o do código-fonte e armazene-o de forma segura, como em um gerenciador de segredos (ex: AWS Secrets Manager, HashiCorp Vault) ou em variáveis de ambiente.
@@ -85,13 +81,11 @@ rules:
           - pattern: $DB.execute("$SQL" + $VAR)
     message: |
       Possível vulnerabilidade de SQL Injection detectada.
-      
       Riscos de segurança:
       - Execução de comandos SQL não autorizados
       - Acesso a dados sensíveis
       - Modificação/exclusão de dados
       - Bypass de autenticação
-      
       Melhores práticas:
       - Use prepared statements/parameterized queries
       - Valide e sanitize todas as entradas
@@ -126,18 +120,16 @@ rules:
               - pattern: args.$VAR
     message: |
       Possível vulnerabilidade de Path Traversal detectada.
-      
       Riscos de segurança:
       - Acesso a arquivos fora do diretório pretendido
       - Leitura de arquivos sensíveis do sistema
       - Exposição de código-fonte e configurações
-      
       Melhores práticas:
       - Valide e sanitize nomes de arquivos
       - Use whitelist de arquivos/diretórios permitidos
       - Implemente controle de acesso baseado em função
       - Normalize paths antes de usar
-    languages: [javascript, python, java, go, ruby, php, typescript]
+    languages: [javascript, python, java, php, typescript, ruby]
     severity: ERROR
     metadata:
       category: security
@@ -148,27 +140,23 @@ rules:
       cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
       owasp: "A01:2021 - Broken Access Control"
 
-# Configurações específicas por projeto podem ser adicionadas aqui
-# Exemplo para projetos específicos:
-# 
-# Para projetos JavaScript/Node.js, adicione:
-# - p/javascript
-# - p/nodejs
-# - p/react (para React)
-# - p/express (para Express)
-#
-# Para projetos Python, adicione:
-# - p/python
-# - p/django (para Django)
-# - p/flask (para Flask)
-#
-# Para projetos Java, adicione:
-# - p/java
-# - p/spring (para Spring)
-#
-# Para projetos Go, adicione:
-# - p/golang
-#
-# Para projetos C#, adicione:
-# - p/csharp
-# - p/dotnet 
+  # As regras abaixo foram "bifurcadas" (forked) do registro do Semgrep para permitir a customização da severidade.
+  - id: javascript.lang.security.weak-hash.weak-hash
+    message: "Uso de algoritmo de hash fraco detectado. Algoritmos como MD5 ou SHA1 são considerados inseguros devido a vulnerabilidades de colisão. Prefira algoritmos mais fortes como SHA-256."
+    languages: [javascript, typescript]
+    severity: WARNING # Severidade customizada para AVISO.
+    patterns:
+      - pattern-either:
+        - pattern: md5(...)
+        - pattern: sha1(...)
+        - pattern: new Md5(...)
+        - pattern: new Sha1(...)
+        - pattern: crypto.createHash('md5')
+        - pattern: crypto.createHash('sha1')
+
+  - id: javascript.lang.security.insecure-inner-html.insecure-inner-html
+    message: "A atribuição direta a 'innerHTML' com dados não sanitizados de fontes externas pode levar a vulnerabilidades de Cross-site Scripting (XSS). Considere usar 'textContent' para texto ou sanitizar o HTML antes de atribuí-lo."
+    languages: [javascript, typescript]
+    severity: WARNING # Severidade customizada para AVISO.
+    patterns:
+      - pattern: $ELEMENT.innerHTML = $DATA 

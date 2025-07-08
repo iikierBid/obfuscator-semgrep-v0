@@ -1,0 +1,54 @@
+# Nome do Workflow para identificação na interface do GitHub Actions
+name: 'Security Scan - Semgrep'
+
+# Define os gatilhos (triggers) que iniciarão este workflow.
+on:
+  # Executa no push para a branch 'main' ou 'master'.
+  push:
+    branches: [ main, master ]
+  # Executa em toda abertura ou atualização de um Pull Request.
+  pull_request:
+    branches: [ main, master ]
+  # Permite a execução manual pela interface do GitHub Actions.
+  workflow_dispatch:
+
+# Define os jobs que serão executados.
+jobs:
+  semgrep_scan:
+    # Nome do job, que aparecerá na UI do GitHub.
+    name: 'Semgrep Scan and Upload'
+    # O job rodará na versão mais recente do Ubuntu fornecida pelo GitHub.
+    runs-on: ubuntu-latest
+
+    steps:
+      # Passo 1: Fazer o checkout do código do repositório.
+      # A ação 'actions/checkout@v4' baixa o seu código para o ambiente de execução.
+      - name: 'Checkout code'
+        uses: actions/checkout@v4
+
+      # Passo 2: Executar a análise do Semgrep.
+      # Este passo executa o mesmo comando Docker que validamos, com duas diferenças cruciais:
+      # --sarif: instrui o Semgrep a gerar os resultados no formato SARIF (Static Analysis Results Interchange Format), um padrão da indústria.
+      # -o semgrep-results.sarif: especifica o nome do arquivo de saída.
+      # continue-on-error: true é vital. Como o Semgrep retorna código '1' se encontra algo, isso impediria os próximos passos de rodarem.
+      # Com esta flag, o job continua mesmo se a análise "falhar", garantindo que sempre tentemos fazer o upload dos resultados.
+      - name: 'Run Semgrep Scan'
+        continue-on-error: true
+        run: |
+          docker run --rm -v "${PWD}:/src" -w /src returntocorp/semgrep \
+            semgrep ci --config .semgrep.yml --config "p/default" --sarif -o semgrep-results.sarif
+
+      # Passo 3: Fazer o upload dos resultados para o DefectDojo.
+      # Este passo usa a ferramenta 'curl' para enviar o arquivo SARIF para a API do DefectDojo.
+      # Ele só será executado se o passo anterior tiver gerado o arquivo de resultados.
+      - name: 'Upload to DefectDojo'
+        if: always() && (steps.semgrep_scan.outcome == 'success' || steps.semgrep_scan.outcome == 'failure')
+        run: |
+          curl --request POST \
+            --url '${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/' \
+            --header 'Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}' \
+            --form 'scan_type="Semgrep"' \
+            --form 'product_name="obfuscator-poc"' \
+            --form 'engagement_name="CI Scan - Run ${{ github.run_id }}"' \
+            --form 'file=@semgrep-results.sarif' \
+            --form 'verified=true' 

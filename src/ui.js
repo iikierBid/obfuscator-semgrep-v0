@@ -121,6 +121,14 @@ class UI {
             this.todoList.appendChild(this.createTodoElement(todo));
         });
     }
+
+    // VULNERABILIDADE LOW: Cross-Site Scripting (XSS) via innerHTML
+    // Função para exibir uma mensagem, mas que é vulnerável a XSS
+    displayWelcomeMessageUnsafe(username) {
+        const messageContainer = document.getElementById('welcomeMessage');
+        // A atribuição direta a innerHTML com dados do usuário é perigosa
+        messageContainer.innerHTML = `Bem-vindo, ${username}!`; // Regra: javascript.lang.security.insecure-inner-html.insecure-inner-html
+    }
 }
 
 export default new UI(); 
