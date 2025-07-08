@@ -26,7 +26,7 @@ jobs:
         id: semgrep_scan
         run: |
           pip install semgrep
-          semgrep ci --config="p/security-audit" --config="p/owasp-top-ten" --config="p/cwe-top-25" --config="auto" --sarif --output="semgrep.sarif"
+          semgrep ci --config="p/default" --sarif --output="semgrep.sarif"
           
       - name: Upload SARIF report to GitHub Security
         # Executa sempre, mas só terá efeito se o arquivo for gerado.
