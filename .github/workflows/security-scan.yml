@@ -43,13 +43,14 @@ jobs:
       # Este passo usa a ferramenta 'curl' para enviar o arquivo SARIF para a API do DefectDojo.
       # A condição 'if: always()' garante que este passo sempre será tentado, mesmo que o anterior falhe.
       - name: 'Upload to DefectDojo'
-        if: always() # Garante que este passo sempre será tentado
+        if: always()
         run: |
           curl --request POST \
             --url '${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/' \
             --header 'Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}' \
             --form 'scan_type="Semgrep"' \
             --form 'product_name="obfuscator-poc"' \
+            --form 'product_type_name="Semgrep"' \
             --form 'engagement_name="CI Scan - Run ${{ github.run_id }}"' \
             --form 'auto_create_context=true' \
             --form 'file=@semgrep-results.sarif' \
@@ -57,7 +58,7 @@ jobs:
 
       # Passo final para garantir que o status do workflow reflita o resultado do scan.
       - name: 'Check for scan issues'
-        if: steps.semgrep_scan.outcome == 'failure'
+        if: steps.semgrep_scan.conclusion == 'failure'
         run: |
           echo "::error::Semgrep scan found blocking issues. Failing the workflow."
           exit 1 
