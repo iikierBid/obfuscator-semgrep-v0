@@ -1,0 +1,22 @@
+{
+  "name": "obfuscator-poc",
+  "version": "1.0.0",
+  "description": "Prova de conceito de ofuscação de código JavaScript",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "obfuscate": "npx javascript-obfuscator src --output dist --config config.json",
+    "build": "npm run obfuscate",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "obfuscation",
+    "poc"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "javascript-obfuscator": "^4.1.0"
+  }
+}
