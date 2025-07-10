@@ -1,0 +1,40 @@
+# Teste incremental - apenas SQL Injection
+# Primeiro teste para verificar conflitos com p/default
+
+rules:
+  # ================================
+  # 1. SQL INJECTION RULES
+  # ================================
+  - id: custom-sql-injection-detection
+    patterns:
+      - pattern-either:
+          - pattern: |
+              "SELECT * FROM $TABLE WHERE $COLUMN = '" + $INPUT + "'"
+          - pattern: |
+              "SELECT * FROM $TABLE WHERE $COLUMN = " + $INPUT
+          - pattern: |
+              "INSERT INTO $TABLE ($COLUMNS) VALUES ('" + $INPUT + "')"
+          - pattern: |
+              "UPDATE $TABLE SET $COLUMN = '" + $INPUT + "'"
+          - pattern: |
+              "DELETE FROM $TABLE WHERE $COLUMN = '" + $INPUT + "'"
+          - pattern: |
+              `SELECT * FROM $TABLE WHERE $COLUMN = '${$INPUT}'`
+          - pattern: |
+              `INSERT INTO $TABLE ($COLUMNS) VALUES ('${$INPUT}')`
+    message: |
+      🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada!
+      
+      A construção de queries SQL através de concatenação direta permite que atacantes
+      injetem código SQL malicioso, comprometendo a segurança do banco de dados.
+      
+      ✅ Soluções recomendadas:
+      1. Prepared Statements: db.query("SELECT * FROM users WHERE id = ?", [userInput])
+      2. ORMs seguros: User.findOne({ where: { id: userInput } })
+      3. Validação rigorosa de entradas
+      
+      📚 OWASP A03:2021 - Injection | CWE-89
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR 
