@@ -1,43 +1,63 @@
 rules:
-  - id: javascript-string-concatenation-for-sql
-    languages:
-      - javascript
-    severity: ERROR
-    message: |
-      🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada.
-      
-      Uma query SQL parece ter sido construída usando concatenação de strings (+),
-      o que é uma prática extremamente perigosa. Use Prepared Statements ou ORMs 
-      para garantir a segurança da aplicação.
-    patterns:
-      - pattern: |
-          "... " + $VAR
-      - pattern-inside: |
-          function $FUNC(...) {
-            ...
-            $QUERY = ...;
-            ...
-          }
-      - metavariable-regex:
-          metavariable: $QUERY
-          regex: (?i)query|sql
-
-  - id: hardcoded-credentials-js-ts
+  # SQL Injection - Concatenação de strings com palavras SQL
+  - id: sql-injection-string-concat
     languages:
       - javascript
       - typescript
+      - python
+      - java
+      - csharp
+      - php
+      - go
+      - ruby
     severity: ERROR
     message: |
-      🚨 ALERTA DE SEGURANÇA: Credencial Hardcoded detectada.
-      
-      Uma credencial sensível (senha, secret, chave de API) foi encontrada 
-      diretamente no código-fonte. Isso é um risco de segurança grave. 
-      Utilize variáveis de ambiente ou um cofre de segredos (vault).
+      🚨 SQL INJECTION DETECTADA!
+      Query SQL sendo construída com concatenação de strings.
+      Use prepared statements para evitar ataques de injeção.
     patterns:
       - pattern-either:
-        - pattern: const $VAR = "..."
-        - pattern: let $VAR = "..."
-        - pattern: var $VAR = "..."
+          - pattern: |
+              "..." + $VAR
+          - pattern: |
+              $VAR + "..."
+          - pattern: |
+              f"...{$VAR}..."
+          - pattern: |
+              `...${$VAR}...`
+          - pattern: |
+              "..." % $VAR
+      - pattern-regex: (?i)(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)
+
+  # Credenciais Hardcoded
+  - id: hardcoded-credentials-universal
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - csharp
+      - php
+      - go
+      - ruby
+      - yaml
+      - json
+    severity: ERROR
+    message: |
+      🚨 CREDENCIAL HARDCODED DETECTADA!
+      Credencial sensível encontrada no código. Use variáveis de ambiente.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR = "..."
+          - pattern: |
+              const $VAR = "..."
+          - pattern: |
+              let $VAR = "..."
+          - pattern: |
+              var $VAR = "..."
+          - pattern: |
+              $VAR: "..."
       - metavariable-regex:
           metavariable: $VAR
-          regex: (?i)password|secret|apikey|api_key|token
+          regex: (?i).*(PASSWORD|SECRET|KEY|TOKEN|API).*
