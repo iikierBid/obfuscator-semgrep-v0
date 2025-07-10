@@ -37,7 +37,7 @@ jobs:
         run: |
           set +e  # Desabilitar exit on error temporariamente
           docker run --rm -v "${PWD}:/src" -w /src returntocorp/semgrep \
-            semgrep --config "p/default" --config .semgrep-test.yml --sarif -o semgrep-results.sarif src/
+            semgrep --config "p/default" --config .semgrep.yml --sarif -o semgrep-results.sarif src/
           SEMGREP_EXIT_CODE=$?
           echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
           set -e  # Reabilitar exit on error

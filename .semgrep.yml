@@ -149,6 +149,32 @@ rules:
     severity: WARNING
 
   # ================================
+  # 4. HARDCODED CREDENTIALS IN JS/TS
+  # ================================
+  - id: hardcoded-secret-by-variable-name-js
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    message: |
+      🚨 CREDENCIAL HARDCODED DETECTADA!
+      
+      Uma credencial sensível foi encontrada hardcoded em uma variável ($VAR).
+      É altamente recomendável que segredos sejam gerenciados por meio de variáveis de 
+      ambiente ou um serviço de "vault".
+    patterns:
+      - pattern-either:
+          - pattern: |
+              const $VAR = "$VALUE"
+          - pattern: |
+              let $VAR = "$VALUE"
+          - pattern: |
+              var $VAR = "$VALUE"
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(PASSWORD|SECRET|API_KEY|KEY|TOKEN).*
+
+  # ================================
   # 4. HARDCODED CREDENTIALS
   # ================================
   - id: hardcoded-credentials-yaml
