@@ -3,9 +3,8 @@ name: 'Security Scan - Semgrep'
 
 # Define os gatilhos (triggers) que iniciarão este workflow.
 on:
-  # Executa no push para a branch 'main' ou 'master'.
+  # Executa em todo push para qualquer branch
   push:
-    branches: [ main, master ]
   # Executa em toda abertura ou atualização de um Pull Request.
   pull_request:
     branches: [ main, master ]
@@ -16,7 +15,7 @@ on:
 jobs:
   semgrep_scan:
     # Nome do job, que aparecerá na UI do GitHub.
-    name: 'Semgrep Scan and Upload'
+    name: 'Semgrep Scan and Generate HTML Report'
     # O job rodará na versão mais recente do Ubuntu fornecida pelo GitHub.
     runs-on: ubuntu-latest
 
@@ -48,19 +47,45 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload to DefectDojo
+      # Gerar relatório HTML dos resultados do Semgrep
+      - name: Generate HTML Report
         if: steps.sarif_file_check.outputs.exists == 'true'
         run: |
-          curl --request POST \
-            --url "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-            --header "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            --form scan_type="SARIF" \
-            --form engagement_name="CI Scan - Run ${{ github.run_id }}" \
-            --form product_name="obfuscator-poc" \
-            --form auto_create_context=true \
-            --form file=@"semgrep-results.sarif" \
-            --form verified=true \
-            --form product_type_name="poc-apps"
+          # Executar o script Python para gerar o relatório HTML
+          python3 scripts/generate_html_report.py semgrep-results.sarif semgrep-report.html
+
+      # Upload do relatório HTML como artifact
+      - name: Upload HTML Report
+        if: steps.sarif_file_check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-html-report
+          path: semgrep-report.html
+          retention-days: 30
+
+      # Upload do arquivo SARIF como artifact também
+      - name: Upload SARIF Report
+        if: steps.sarif_file_check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif-report
+          path: semgrep-results.sarif
+          retention-days: 30
+
+      # COMENTADO: Upload para DefectDojo (não funcional ainda)
+      # - name: Upload to DefectDojo
+      #   if: steps.sarif_file_check.outputs.exists == 'true'
+      #   run: |
+      #     curl --request POST \
+      #       --url "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+      #       --header "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+      #       --form scan_type="SARIF" \
+      #       --form engagement_name="CI Scan - Run ${{ github.run_id }}" \
+      #       --form product_name="obfuscator-poc" \
+      #       --form auto_create_context=true \
+      #       --form file=@"semgrep-results.sarif" \
+      #       --form verified=true \
+      #       --form product_type_name="poc-apps"
 
       - name: Check scan outcome
         if: steps.semgrep_scan.outcome == 'failure'
