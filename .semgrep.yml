@@ -1,22 +1,43 @@
 rules:
-  - id: js-sql-injection-in-variable
+  - id: javascript-string-concatenation-for-sql
     languages:
       - javascript
     severity: ERROR
     message: |
       🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada.
       
-      Query SQL construída com concatenação de string em uma variável com nome 
-      sugestivo (query/sql). Use Prepared Statements ou ORMs para evitar
-      ataques de injeção de SQL.
+      Uma query SQL parece ter sido construída usando concatenação de strings (+),
+      o que é uma prática extremamente perigosa. Use Prepared Statements ou ORMs 
+      para garantir a segurança da aplicação.
     patterns:
-      - pattern-either:
-          - pattern: |
-              $QUERY = "..." + $...;
-          - pattern: |
-              $QUERY = `...` + $...;
-          - pattern: |
-              $QUERY = `...${$...}...`;
+      - pattern: |
+          "... " + $VAR
+      - pattern-inside: |
+          function $FUNC(...) {
+            ...
+            $QUERY = ...;
+            ...
+          }
       - metavariable-regex:
           metavariable: $QUERY
           regex: (?i)query|sql
+
+  - id: hardcoded-credentials-js-ts
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+    message: |
+      🚨 ALERTA DE SEGURANÇA: Credencial Hardcoded detectada.
+      
+      Uma credencial sensível (senha, secret, chave de API) foi encontrada 
+      diretamente no código-fonte. Isso é um risco de segurança grave. 
+      Utilize variáveis de ambiente ou um cofre de segredos (vault).
+    patterns:
+      - pattern-either:
+        - pattern: const $VAR = "..."
+        - pattern: let $VAR = "..."
+        - pattern: var $VAR = "..."
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i)password|secret|apikey|api_key|token
