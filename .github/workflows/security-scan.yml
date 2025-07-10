@@ -94,10 +94,7 @@ jobs:
       - name: Check scan outcome and fail if ERROR vulnerabilities found
         if: steps.semgrep_scan.outputs.exit_code == '1'
         run: |
-          echo "::error::🚨 VULNERABILIDADES CRÍTICAS ENCONTRADAS!"
-          echo "::error::Semgrep detectou vulnerabilidades de severidade ERROR."
-          echo "::error::Exit code: ${{ steps.semgrep_scan.outputs.exit_code }}"
-          echo "::notice::📋 Relatório HTML foi gerado e está disponível nos artifacts."
-          echo "::notice::🔍 Verifique o relatório HTML para detalhes completos das vulnerabilidades."
-          echo "::warning::⚠️ PIPELINE FALHANDO INTENCIONALMENTE devido a vulnerabilidades ERROR!"
+          echo "::error::🚨 VULNERABILIDADES CRÍTICAS ENCONTRADAS! O PIPELINE VAI FALHAR."
+          echo "::error::O Semgrep encontrou vulnerabilidades de severidade ERROR (Exit Code: ${{ steps.semgrep_scan.outputs.exit_code }})."
+          echo "::warning::⚠️ ESTE WORKFLOW ESTÁ SENDO INTERROMPIDO INTENCIONALMENTE."
           exit 1
