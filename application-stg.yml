@@ -1,0 +1,97 @@
+server:
+  port: 8082
+
+# PROMETHEUS
+management:
+  endpoint:
+    shutdown:
+      enabled: true
+    health:
+      show-details: always      
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+path:
+  notice:
+    # STG
+    api: https://s.stage.superbid.net/
+
+# AJP TOMCAT
+tomcat:
+  ajp:
+    port: 7083
+    remoteauthentication: false
+    enabled: true
+    scheme: http
+    secure: false
+    allowtrace: false
+    protocol: AJP/1.3
+    maxThreads: 1000
+    minSpareThreads: 20
+    acceptCount: 200
+    connectionTimeout: 350000        
+
+
+param:
+  livebid.minutes: 5
+
+api:
+  static: https://static.s4bdigital.net/logos_empresas/
+  judicialNotice: https://static.s4bdigital.net/products_pdf_descs/
+  store-query: https://stgapi.sbwebservices.net/store-query/
+  account-granted-permission: https://stgapi.s4bdigital.net/account/granted-permission/
+
+# ELASTICSEARCH
+spring:
+  data:
+    elasticsearch:
+      #cluster-nodes: 127.0.0.1:9300
+      #cluster-name: elasticsearch
+#      cluster-nodes: 69.55.61.99:9301
+#      cluster-name: sbws-es-cluster-pre-teste
+      cluster-nodes: 192.168.51.31:9300,192.168.51.32:9300,192.168.51.33:9300
+      cluster-name: sbws-es-cluster
+      repositories:
+        enabled: true
+        
+# DATABASE
+  datasource:
+      url: jdbc:oracle:thin:@192.168.47.30:1521:GARR
+      username: sbsel
+      password: noJ7TY97
+      driver-class-name: oracle.jdbc.OracleDriver
+      test-on-borrow: true
+      validation-query: SELECT 1 FROM dual
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        maximum-pool-size: 20
+        data-source-properties:
+          cachePrepStmts: true
+          prepStmtCacheSize: 250git s
+          prepStmtCacheSqlLimit: 2048
+          useServerPrepStmts: true
+          maxLifetime: 500
+          rewriteBatchedStatements: true
+          idle-timeout: 10000
+  jpa:
+    database-platform: org.hibernate.dialect.Oracle10gDialect
+    generate-ddl: false
+    show_sql: true
+    hibernate:
+      ddl-auto: none
+        
+#swagger:
+#  api-base-path: /event-query
+
+#logging.config.classpath: log4j2.yml
+      
+logging:
+  level:
+#    root: INFO
+#    org.springframework.web: DEBUG
+    org.springframework.data.elasticsearch.core: TRACE
+#    org.hibernate.SQL: DEBUG
+#    org.hibernate.type.descriptor.sql : TRACE
+    
