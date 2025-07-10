@@ -1,20 +1,45 @@
 rules:
   # ================================
-  # SQL INJECTION - String concatenation in SQL queries
+  # SQL INJECTION - Comprehensive patterns for production scenarios
   # ================================
-  - id: js-sql-injection-concat
-    languages: [javascript, typescript]
+  - id: sql-injection-production
+    languages: [javascript, typescript, python, java, php, csharp, go]
     severity: ERROR
     message: |
       🚨 SQL INJECTION DETECTADA!
-      Query SQL construída com concatenação de strings. Use prepared statements.
+      Query SQL construída dinamicamente com concatenação ou interpolação de dados não sanitizados.
+      Isso permite ataques de injeção SQL. Use prepared statements ou ORMs seguros.
+      
+      ✅ Soluções:
+      - Prepared Statements: db.query("SELECT * FROM users WHERE id = ?", [userId])
+      - ORMs: User.findOne({where: {id: userId}})
+      - Sanitização adequada de entrada
     patterns:
       - pattern-either:
+          # Concatenação simples com +
           - pattern: |
               $VAR = "..." + $INPUT
           - pattern: |
+              $VAR = $INPUT + "..."
+          # Template literals JavaScript/TypeScript
+          - pattern: |
               $VAR = `...${$INPUT}...`
-      - pattern-regex: (?i)(SELECT|INSERT|UPDATE|DELETE)
+          # Concatenação Python com f-strings
+          - pattern: |
+              $VAR = f"...{$INPUT}..."
+          # Concatenação Python com %
+          - pattern: |
+              $VAR = "..." % $INPUT
+          # Concatenação Java/C#
+          - pattern: |
+              $VAR = "..." + $INPUT + "..."
+          # String format Python
+          - pattern: |
+              $VAR = "...{}...".format($INPUT)
+          # PHP concatenação
+          - pattern: |
+              $VAR = "..." . $INPUT
+      - pattern-regex: (?i).*(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|UNION|DROP|CREATE|ALTER|EXEC).*
 
   # ================================  
   # HARDCODED CREDENTIALS - Specific variable names
