@@ -1,23 +1,18 @@
 rules:
-  - id: javascript-sql-injection-by-function-name
-    languages:
-      - javascript
+  - id: custom-js-sql-injection-vars
+    languages: [javascript]
     severity: ERROR
     message: |
       🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada.
-      Uma query SQL parece estar sendo construída com concatenação de strings
-      dentro de uma função com nome suspeito ('sql', 'query', etc.).
-      Esta é uma prática extremamente perigosa.
-
-      ✅ Solução: Use Prepared Statements ou ORMs para todas as queries.
+      
+      Query SQL construída com concatenação de string em uma variável com nome 
+      sugestivo (query/sql). Use Prepared Statements.
     patterns:
       - pattern-either:
           - pattern: |
-              "..." + $INPUT
+              $QUERY = "... " + $INPUT;
           - pattern: |
-              `...${$INPUT}...`
-      - pattern-inside: |
-          function $FUNC(...) { ... }
+              $QUERY = `...` + $INPUT;
       - metavariable-regex:
-          metavariable: $FUNC
-          regex: (?i)sql
+          metavariable: $QUERY
+          regex: (?i)query|sql

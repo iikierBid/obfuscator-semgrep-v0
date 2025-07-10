@@ -20,81 +20,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Passo 1: Fazer o checkout do código do repositório.
-      # A ação 'actions/checkout@v4' baixa o seu código para o ambiente de execução.
       - name: 'Checkout code'
         uses: actions/checkout@v4
 
-      # Passo 2: Executar a análise do Semgrep.
-      # Este passo executa o mesmo comando Docker que validamos, com duas diferenças cruciais:
-      # --sarif: instrui o Semgrep a gerar os resultados no formato SARIF (Static Analysis Results Interchange Format), um padrão da indústria.
-      # -o semgrep-results.sarif: especifica o nome do arquivo de saída.
-      # continue-on-error: true é vital. Como o Semgrep retorna código '1' se encontra algo, isso impediria os próximos passos de rodarem.
-      # Com esta flag, o job continua mesmo se a análise "falhar", garantindo que sempre tentemos fazer o upload dos resultados.
       - name: 'Run Semgrep Scan'
-        id: semgrep_scan
-        continue-on-error: true
         run: |
-          set +e  # Desabilitar exit on error temporariamente
-          docker run --rm -v "${PWD}:/src" -w /src returntocorp/semgrep \
-            semgrep --config "p/default" --config .semgrep.yml --sarif -o semgrep-results.sarif src/
-          SEMGREP_EXIT_CODE=$?
-          echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
-          set -e  # Reabilitar exit on error
-          exit 0  # Sempre sair com sucesso para continuar o pipeline
+          docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
+            semgrep scan --config "p/default" --config .semgrep.yml --sarif -o semgrep-results.sarif --error src/
 
-      - name: Check for SARIF file existence
-        id: sarif_file_check
-        run: |
-          if [ -f "semgrep-results.sarif" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      # Gerar relatório HTML dos resultados do Semgrep
-      - name: Generate HTML Report
-        run: |
-          # Executar o script Python para gerar o relatório HTML
-          # O script irá lidar com casos onde o arquivo SARIF não existe
-          python3 scripts/generate_html_report.py semgrep-results.sarif semgrep-report.html
-
-      # Upload do relatório HTML como artifact
-      - name: Upload HTML Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-html-report
-          path: semgrep-report.html
-          retention-days: 30
-
-      # Upload do arquivo SARIF como artifact também
-      - name: Upload SARIF Report
-        if: steps.sarif_file_check.outputs.exists == 'true'
+      - name: 'Upload SARIF file'
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-sarif-report
           path: semgrep-results.sarif
-          retention-days: 30
+          retention-days: 7
 
-      # COMENTADO: Upload para DefectDojo (não funcional ainda)
-      # - name: Upload to DefectDojo
-      #   if: steps.sarif_file_check.outputs.exists == 'true'
-      #   run: |
-      #     curl --request POST \
-      #       --url "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-      #       --header "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-      #       --form scan_type="SARIF" \
-      #       --form engagement_name="CI Scan - Run ${{ github.run_id }}" \
-      #       --form product_name="obfuscator-poc" \
-      #       --form auto_create_context=true \
-      #       --form file=@"semgrep-results.sarif" \
-      #       --form verified=true \
-      #       --form product_type_name="poc-apps"
-
-      - name: Check scan outcome and fail if ERROR vulnerabilities found
-        if: steps.semgrep_scan.outputs.exit_code == '1'
+      - name: 'Generate HTML Report'
+        if: success()
         run: |
-          echo "::error::🚨 VULNERABILIDADES CRÍTICAS ENCONTRADAS! O PIPELINE VAI FALHAR."
-          echo "::error::O Semgrep encontrou vulnerabilidades de severidade ERROR (Exit Code: ${{ steps.semgrep_scan.outputs.exit_code }})."
-          echo "::warning::⚠️ ESTE WORKFLOW ESTÁ SENDO INTERROMPIDO INTENCIONALMENTE."
-          exit 1
+          echo "Semgrep scan passed. Generating HTML report..."
+          python3 scripts/generate_html_report.py semgrep-results.sarif semgrep-report.html
+
+      - name: 'Upload HTML report'
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-html-report
+          path: semgrep-report.html
+          retention-days: 7
