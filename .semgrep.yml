@@ -1,0 +1,645 @@
+# Configuração complementar ao p/default do Semgrep
+# Estas regras cobrem lacunas específicas não cobertas pelo p/default
+
+rules:
+  # ================================
+  # 1. SQL INJECTION RULES
+  # ================================
+  - id: sql-injection-detection
+    patterns:
+      - pattern-either:
+          - pattern: |
+              "SELECT * FROM $TABLE WHERE $COLUMN = '" + $INPUT + "'"
+          - pattern: |
+              "SELECT * FROM $TABLE WHERE $COLUMN = " + $INPUT
+          - pattern: |
+              "INSERT INTO $TABLE ($COLUMNS) VALUES ('" + $INPUT + "')"
+          - pattern: |
+              "UPDATE $TABLE SET $COLUMN = '" + $INPUT + "'"
+          - pattern: |
+              "DELETE FROM $TABLE WHERE $COLUMN = '" + $INPUT + "'"
+          - pattern: |
+              `SELECT * FROM $TABLE WHERE $COLUMN = '${$INPUT}'`
+          - pattern: |
+              `INSERT INTO $TABLE ($COLUMNS) VALUES ('${$INPUT}')`
+          - pattern: |
+              f"SELECT * FROM $TABLE WHERE $COLUMN = '{$INPUT}'"
+          - pattern: |
+              "SELECT * FROM $TABLE WHERE $COLUMN = '%s'" % $INPUT
+    message: |
+      🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada!
+
+      A construção de queries SQL através de concatenação direta permite que atacantes
+      injetem código SQL malicioso, comprometendo a segurança do banco de dados.
+
+      ⚠️  Exemplo de ataque:
+      userInput = "'; DROP TABLE users; --"
+      → query = "SELECT * FROM users WHERE id = ''; DROP TABLE users; --'"
+
+      ✅ Soluções recomendadas:
+      1. Prepared Statements: db.query("SELECT * FROM users WHERE id = ?", [userInput])
+      2. ORMs seguros: User.findOne({ where: { id: userInput } })
+      3. Validação rigorosa de entradas
+      4. Sanitização com whitelist de caracteres permitidos
+
+      📚 OWASP A03:2021 - Injection | CWE-89
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+      - rust
+      - dart
+    severity: ERROR
+
+  # ================================
+  # 2. COMMAND INJECTION RULES
+  # ================================
+  - id: command-injection-detection
+    patterns:
+      - pattern-either:
+          - pattern: exec($CMD + $INPUT)
+          - pattern: exec(`$CMD ${$INPUT}`)
+          - pattern: subprocess.run($CMD + $INPUT, shell=True)
+          - pattern: subprocess.call($CMD + $INPUT, shell=True)
+          - pattern: os.system($CMD + $INPUT)
+          - pattern: os.system(f"$CMD {$INPUT}")
+          - pattern: Runtime.getRuntime().exec($CMD + $INPUT)
+          - pattern: ProcessBuilder($CMD + $INPUT)
+    message: |
+      🚨 VULNERABILIDADE CRÍTICA: Command Injection detectada!
+
+      A execução de comandos do sistema com entrada não validada permite
+      que atacantes executem comandos arbitrários no servidor.
+
+      ⚠️  Exemplo de ataque:
+      filename = "test.txt; rm -rf /"
+      → comando = "cat test.txt; rm -rf /"
+
+      ✅ Soluções recomendadas:
+      1. Validação rigorosa de entradas
+      2. Uso de listas de argumentos ao invés de strings
+      3. Sanitização com whitelist de caracteres
+      4. Evitar shell=True
+
+      📚 OWASP A03:2021 - Injection | CWE-78
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+      - rust
+      - dart
+      - c
+      - cpp
+    severity: ERROR
+
+  # ================================
+  # 3. WEAK HASH ALGORITHMS
+  # ================================
+  - id: weak-hash-algorithms
+    patterns:
+      - pattern-either:
+          - pattern: crypto.createHash('md5')
+          - pattern: crypto.createHash('sha1')
+          - pattern: hashlib.md5($INPUT)
+          - pattern: hashlib.sha1($INPUT)
+          - pattern: MessageDigest.getInstance("MD5")
+          - pattern: MessageDigest.getInstance("SHA1")
+          - pattern: MD5.Create()
+          - pattern: SHA1.Create()
+    message: |
+      Uso de algoritmo de hash criptograficamente fraco detectado.
+      MD5 e SHA1 são considerados inseguros devido a vulnerabilidades de colisão conhecidas.
+
+      Recomendações:
+      - Use SHA-256, SHA-3, ou BLAKE2 para novos projetos
+      - Para senhas, use bcrypt, scrypt, ou Argon2
+      - Para assinaturas digitais, use SHA-256 ou superior
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+      - rust
+      - dart
+      - c
+      - cpp
+    severity: WARNING
+
+  # ================================
+  # 4. HARDCODED CREDENTIALS
+  # ================================
+  - id: hardcoded-credentials-yaml
+    patterns:
+      - pattern-either:
+          - pattern: |
+              password: $VALUE
+          - pattern: |
+              username: $VALUE
+          - pattern: |
+              secret: $VALUE
+          - pattern: |
+              token: $VALUE
+          - pattern: |
+              api_key: $VALUE
+          - pattern: |
+              private_key: $VALUE
+    message: |
+      🚨 CREDENCIAIS HARDCODED DETECTADAS!
+
+      Encontradas credenciais sensíveis (senhas, tokens, chaves) hardcoded em arquivo
+      de configuração. Isso representa um risco crítico de segurança.
+
+      ⚠️  Riscos:
+      • Exposição de credenciais no controle de versão (Git)
+      • Acesso não autorizado a sistemas e bancos de dados
+      • Violação de compliance e regulamentações
+
+      ✅ Soluções recomendadas:
+      1. Variáveis de ambiente: password: ${DB_PASSWORD}
+      2. Vaults seguros: HashiCorp Vault, AWS Secrets Manager
+      3. Ferramentas de config: Spring Cloud Config, Kubernetes Secrets
+      4. Nunca committar credenciais reais no código
+
+      🔧 Exemplo seguro:
+      datasource:
+        username: ${DB_USERNAME:defaultuser}
+        password: ${DB_PASSWORD}
+
+      📚 OWASP A07:2021 - Identification and Authentication | CWE-798
+    languages:
+      - yaml
+      - json
+      - xml
+      - toml
+      - properties
+    severity: ERROR
+
+  # ================================
+  # 5. HARDCODED CREDENTIALS IN CODE
+  # ================================
+  - id: hardcoded-credentials-code
+    patterns:
+      - pattern-either:
+          - pattern: |
+              const $VAR = "sk_live_$REST"
+          - pattern: |
+              const $VAR = "sk_test_$REST"
+          - pattern: |
+              const $VAR = "AKIA$REST"
+          - pattern: |
+              const $VAR = "ghp_$REST"
+          - pattern: |
+              const $VAR = "xoxb-$REST"
+          - pattern: |
+              $VAR = "admin123"
+          - pattern: |
+              $VAR = "password123"
+          - pattern: |
+              SECRET_KEY = "$VALUE"
+          - pattern: |
+              API_TOKEN = "$VALUE"
+          - pattern: |
+              String $VAR = "sk_live_$REST";
+          - pattern: |
+              private static final String $VAR = "$SECRET";
+    message: |
+      🚨 CREDENCIAIS HARDCODED DETECTADAS NO CÓDIGO!
+
+      Credenciais sensíveis hardcoded representam um risco crítico de segurança.
+
+      ✅ Soluções:
+      1. Variáveis de ambiente: process.env.SECRET_KEY
+      2. Arquivos de configuração seguros
+      3. Sistemas de gerenciamento de secrets
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+      - rust
+      - dart
+      - c
+      - cpp
+    severity: ERROR
+
+  # ================================
+  # 6. UNSAFE DESERIALIZATION
+  # ================================
+  - id: unsafe-deserialization
+    patterns:
+      - pattern-either:
+          - pattern: pickle.loads($INPUT)
+          - pattern: pickle.load($INPUT)
+          - pattern: yaml.load($INPUT)
+          - pattern: JSON.parse($INPUT)
+          - pattern: ObjectInputStream.readObject()
+          - pattern: JsonConvert.DeserializeObject($INPUT)
+          - pattern: unserialize($INPUT)
+    message: |
+      🚨 DESERIALIZAÇÃO INSEGURA DETECTADA!
+
+      Deserialização de dados não confiáveis pode levar a execução de código remoto.
+
+      ⚠️  Riscos:
+      • Execução de código arbitrário
+      • Escalação de privilégios
+      • Denial of Service
+
+      ✅ Soluções:
+      1. Validação rigorosa antes da deserialização
+      2. Use yaml.safe_load() ao invés de yaml.load()
+      3. Implemente whitelist de classes permitidas
+      4. Use formatos de dados mais seguros (JSON)
+    languages:
+      - python
+      - javascript
+      - typescript
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+    severity: ERROR
+
+  # ================================
+  # 7. PATH TRAVERSAL
+  # ================================
+  - id: path-traversal-detection
+    patterns:
+      - pattern-either:
+          - pattern: fs.readFileSync($PATH + $INPUT)
+          - pattern: fs.readFileSync('./' + $INPUT)
+          - pattern: fs.readFileSync(`$PATH${$INPUT}`)
+          - pattern: open($PATH + $INPUT)
+          - pattern: open(f"$PATH{$INPUT}")
+          - pattern: new File($PATH + $INPUT)
+          - pattern: File.ReadAllText($PATH + $INPUT)
+          - pattern: file_get_contents($PATH . $INPUT)
+    message: |
+      🚨 PATH TRAVERSAL DETECTADO!
+
+      Construção de caminhos de arquivo sem validação permite acesso
+      a arquivos fora do diretório pretendido.
+
+      ⚠️  Exemplo de ataque:
+      filename = "../../../etc/passwd"
+      → path = "./uploads/../../../etc/passwd"
+
+      ✅ Soluções:
+      1. Validação rigorosa de nomes de arquivo
+      2. Whitelist de caracteres permitidos
+      3. Uso de path.resolve() com verificação
+      4. Implementar chroot/jail
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+      - rust
+      - dart
+      - c
+      - cpp
+    severity: ERROR
+
+  # ================================
+  # 8. DANGEROUS FUNCTIONS
+  # ================================
+  - id: dangerous-functions
+    patterns:
+      - pattern-either:
+          - pattern: eval($INPUT)
+          - pattern: new Function($INPUT)
+          - pattern: setTimeout($INPUT, $TIME)
+          - pattern: setInterval($INPUT, $TIME)
+          - pattern: exec($INPUT)
+          - pattern: execfile($INPUT)
+          - pattern: eval($INPUT) # PHP
+          - pattern: assert($INPUT) # PHP
+    message: |
+      🚨 FUNÇÃO PERIGOSA DETECTADA!
+
+      Uso de funções que executam código dinamicamente representa
+      um risco de segurança se a entrada não for validada.
+
+      ⚠️  Riscos:
+      • Execução de código arbitrário
+      • Injection de código malicioso
+      • Bypass de controles de segurança
+
+      ✅ Soluções:
+      1. Evitar eval() e similares
+      2. Validar rigorosamente entradas
+      3. Usar alternativas mais seguras (JSON.parse, etc.)
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+    severity: ERROR
+
+  # ================================
+  # 9. WEAK CRYPTOGRAPHY
+  # ================================
+  - id: weak-cryptography
+    patterns:
+      - pattern-either:
+          - pattern: crypto.createCipher('des', $KEY)
+          - pattern: crypto.createCipher('rc4', $KEY)
+          - pattern: Math.random()
+          - pattern: random.random()
+          - pattern: jwt.sign($PAYLOAD, $SECRET, {algorithm: "none"})
+          - pattern: Random.nextInt()
+          - pattern: new Random()
+    message: |
+      🚨 CRIPTOGRAFIA FRACA DETECTADA!
+
+      Uso de algoritmos criptográficos fracos ou geradores de números
+      aleatórios inseguros.
+
+      ⚠️  Problemas:
+      • DES e RC4 são criptograficamente quebrados
+      • Math.random() não é criptograficamente seguro
+      • JWT com algoritmo "none" não possui assinatura
+
+      ✅ Soluções:
+      1. Use AES-256 para criptografia simétrica
+      2. Use crypto.randomBytes() para números aleatórios
+      3. Use algoritmos JWT seguros (HS256, RS256)
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+    severity: WARNING
+
+  # ================================
+  # 10. INSECURE RANDOM
+  # ================================
+  - id: insecure-random-for-security
+    patterns:
+      - pattern-either:
+          - pattern: Math.random().toString(36)
+          - pattern: str(random.randint($MIN, $MAX))
+          - pattern: random.choice($CHARS)
+          - pattern: Random.nextInt()
+          - pattern: new Random().nextInt()
+    message: |
+      🚨 GERADOR ALEATÓRIO INSEGURO PARA SEGURANÇA!
+
+      Uso de geradores de números aleatórios não criptográficos
+      para propósitos de segurança.
+
+      ⚠️  Riscos:
+      • Tokens previsíveis
+      • Senhas fracas
+      • Chaves de sessão comprometidas
+
+      ✅ Soluções:
+      1. Use crypto.randomBytes() (Node.js)
+      2. Use secrets.token_hex() (Python)
+      3. Use bibliotecas criptográficas adequadas
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+    severity: ERROR
+
+  # ================================
+  # 11. REGEX DOS (DENIAL OF SERVICE)
+  # ================================
+  - id: regex-dos-vulnerability
+    patterns:
+      - pattern-either:
+          - pattern: /^(a+)+$/
+          - pattern: /^(a|a)*$/
+          - pattern: /(a+)+/
+          - pattern: re.compile(r"^(a+)+$")
+          - pattern: Pattern.compile("^(a+)+$")
+    message: |
+      🚨 VULNERABILIDADE DE REGEX DOS!
+
+      Regex com backtracking exponencial pode causar Denial of Service
+      quando processando entradas maliciosas.
+
+      ⚠️  Risco:
+      • Consumo excessivo de CPU
+      • Timeout de aplicação
+      • Indisponibilidade do serviço
+
+      ✅ Soluções:
+      1. Evitar quantificadores aninhados
+      2. Usar regex mais específicas
+      3. Implementar timeout para regex
+      4. Validar entrada antes do processamento
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+    severity: WARNING
+
+  # ================================
+  # 12. BUFFER OVERFLOW
+  # ================================
+  - id: buffer-overflow-risk
+    patterns:
+      - pattern-either:
+          - pattern: Buffer.allocUnsafe($SIZE)
+          - pattern: Buffer.from($INPUT).toString()
+          - pattern: strcpy($DEST, $SRC)
+          - pattern: strcat($DEST, $SRC)
+          - pattern: sprintf($BUFFER, $FORMAT)
+    message: |
+      🚨 RISCO DE BUFFER OVERFLOW!
+
+      Uso de operações de buffer potencialmente inseguras.
+
+      ⚠️  Riscos:
+      • Corrupção de memória
+      • Execução de código arbitrário
+      • Crash da aplicação
+
+      ✅ Soluções:
+      1. Use Buffer.alloc() ao invés de Buffer.allocUnsafe()
+      2. Validar tamanho do buffer
+      3. Implementar verificações de bounds
+    languages:
+      - javascript
+      - typescript
+      - c
+      - cpp
+    severity: WARNING
+
+  # ================================
+  # 13. PROTOTYPE POLLUTION
+  # ================================
+  - id: prototype-pollution
+    patterns:
+      - pattern-either:
+          - pattern: $OBJ["__proto__"] = $VALUE
+          - pattern: $OBJ.__proto__ = $VALUE
+          - pattern: $OBJ["constructor"] = $VALUE
+          - pattern: $OBJ.constructor = $VALUE
+    message: |
+      🚨 PROTOTYPE POLLUTION DETECTADA!
+
+      Modificação de protótipos pode afetar objetos globalmente.
+
+      ⚠️  Riscos:
+      • Modificação de comportamento global
+      • Bypass de controles de segurança
+      • Execução de código não intencional
+
+      ✅ Soluções:
+      1. Validar chaves de objetos
+      2. Usar Object.create(null) para objetos sem protótipo
+      3. Implementar whitelist de propriedades
+    languages:
+      - javascript
+      - typescript
+    severity: ERROR
+
+  # ================================
+  # 14. CORS MISCONFIGURATION
+  # ================================
+  - id: cors-misconfiguration
+    patterns:
+      - pattern-either:
+          - pattern: res.header('Access-Control-Allow-Origin', '*')
+          - pattern: res.setHeader('Access-Control-Allow-Origin', '*')
+          - pattern: response.setHeader("Access-Control-Allow-Origin", "*")
+          - pattern: header("Access-Control-Allow-Origin: *")
+    message: |
+      🚨 CONFIGURAÇÃO CORS INSEGURA!
+
+      Permitir origin '*' com credenciais pode expor recursos sensíveis.
+
+      ⚠️  Riscos:
+      • Acesso não autorizado a recursos
+      • Vazamento de dados sensíveis
+      • Ataques CSRF
+
+      ✅ Soluções:
+      1. Especificar origins específicos
+      2. Validar origins dinamicamente
+      3. Não usar '*' com credenciais
+    languages:
+      - javascript
+      - typescript
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - python
+    severity: ERROR
+
+  # ================================
+  # 15. TIMING ATTACKS
+  # ================================
+  - id: timing-attack-vulnerability
+    patterns:
+      - pattern-either:
+          - pattern: $PASSWORD == $INPUT
+          - pattern: $TOKEN === $INPUT
+          - pattern: if ($SECRET == $INPUT)
+          - pattern: $PASSWORD.equals($INPUT)
+          - pattern: string.Compare($PASSWORD, $INPUT)
+    message: |
+      🚨 VULNERABILIDADE DE TIMING ATTACK!
+
+      Comparação de strings sensíveis pode vazar informações através
+      do tempo de execução.
+
+      ⚠️  Riscos:
+      • Vazamento de informações de timing
+      • Bypass de autenticação
+      • Descoberta de tokens/senhas
+
+      ✅ Soluções:
+      1. Use crypto.timingSafeEqual() (Node.js)
+      2. Use hmac.compare_digest() (Python)
+      3. Implementar comparação de tempo constante
+    languages:
+      - javascript
+      - typescript
+      - python
+      - java
+      - kotlin
+      - csharp
+      - go
+      - php
+      - ruby
+      - swift
+      - scala
+    severity: WARNING

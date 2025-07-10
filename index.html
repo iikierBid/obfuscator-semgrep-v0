@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List - Demo de Ofuscação</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .todo-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .filter-button {
+            background-color: #95a5a6;
+        }
+
+        .filter-button.active {
+            background-color: #7f8c8d;
+        }
+
+        .todo-list {
+            list-style: none;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            gap: 10px;
+        }
+
+        .todo-item:last-child {
+            border-bottom: none;
+        }
+
+        .todo-item.completed span {
+            text-decoration: line-through;
+            color: #95a5a6;
+        }
+
+        .todo-item span {
+            flex: 1;
+        }
+
+        .delete-button {
+            background-color: #e74c3c;
+            padding: 5px 10px;
+        }
+
+        .delete-button:hover {
+            background-color: #c0392b;
+        }
+
+        .edit-input {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Todo List</h1>
+        
+        <div class="todo-input">
+            <input type="text" id="todoInput" placeholder="Adicione uma nova tarefa...">
+            <button id="addButton">Adicionar</button>
+        </div>
+
+        <div class="filters">
+            <button class="filter-button active" data-filter="all">Todas</button>
+            <button class="filter-button" data-filter="active">Ativas</button>
+            <button class="filter-button" data-filter="completed">Completadas</button>
+            <button id="clearCompleted">Limpar Completadas</button>
+        </div>
+
+        <ul id="todoList" class="todo-list">
+            <!-- As tarefas serão inseridas aqui via JavaScript -->
+        </ul>
+    </div>
+
+    <script type="module" src="dist/app.js"></script>
+</body>
+</html> 

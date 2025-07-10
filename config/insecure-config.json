@@ -1,0 +1,62 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "username": "admin",
+    "password": "admin123",
+    "ssl": false,
+    "connection_timeout": 30000
+  },
+  "api_keys": {
+    "stripe_secret": "sk_live_abcdef123456789012345678901234567890abcdef",
+    "aws_access_key": "AKIAIOSFODNN7EXAMPLE",
+    "aws_secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "google_api_key": "AIzaSyDx1234567890abcdef1234567890abcdef",
+    "github_token": "ghp_1234567890abcdef1234567890abcdef123456"
+  },
+  "security": {
+    "jwt_secret": "weak-secret-key",
+    "encryption_key": "12345678901234567890123456789012",
+    "csrf_protection": false,
+    "cors_allow_all": true,
+    "debug_mode": true,
+    "https_only": false
+  },
+  "logging": {
+    "level": "DEBUG",
+    "include_sensitive_data": true,
+    "log_passwords": true,
+    "output_to_console": true
+  },
+  "session": {
+    "secret": "session-secret-123",
+    "secure": false,
+    "http_only": false,
+    "same_site": "none"
+  },
+  "email": {
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "username": "admin@company.com",
+    "password": "email_password_123",
+    "use_tls": false
+  },
+  "backup": {
+    "ftp_host": "backup.company.com",
+    "ftp_username": "backup_user",
+    "ftp_password": "backup_pass_456",
+    "encryption": "none"
+  },
+  "third_party": {
+    "webhook_secret": "webhook_secret_789",
+    "slack_token": "xoxb-FAKE-TOKEN-FOR-TESTING-abcdef1234567890abcdef12",
+    "discord_token": "ODc1NzA5NjU2MTk4MTg1MDYz.YRvkTg.example_token_here"
+  },
+  "development": {
+    "allow_file_upload": true,
+    "upload_path": "/var/www/uploads/",
+    "max_file_size": "unlimited",
+    "allowed_extensions": "*",
+    "execute_uploaded_files": true
+  }
+} 
