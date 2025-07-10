@@ -203,6 +203,22 @@ def generate_html_report(sarif_file_path, output_file_path):
                 
                 total_issues = len(valid_results)
                 
+                # DEBUG: Imprimir informações sobre os resultados
+                print(f"🔍 DEBUG: Total de resultados no SARIF: {len(run['results'])}")
+                print(f"🔍 DEBUG: Resultados válidos processados: {total_issues}")
+                print(f"🔍 DEBUG: Resultados filtrados:")
+                for i, result in enumerate(valid_results):
+                    rule_id = result.get('ruleId', 'N/A')
+                    if 'locations' in result and result['locations']:
+                        for location in result['locations']:
+                            if 'physicalLocation' in location:
+                                artifact_location = location['physicalLocation'].get('artifactLocation', {})
+                                uri = artifact_location.get('uri', '')
+                                region = location['physicalLocation'].get('region', {})
+                                start_line = region.get('startLine', 'N/A')
+                                print(f"   {i+1}. {rule_id} em {uri}:{start_line}")
+                                break
+                
                 # Contar issues por severidade usando o mapa de regras
                 for result in valid_results:
                     rule_id = result.get('ruleId', '')

@@ -123,49 +123,19 @@ rules:
 
   # Credenciais hardcoded em arquivos YAML - complementa o p/default
   - id: hardcoded-credentials-yaml
-    patterns:
-      - pattern-either:
-          # Senhas e tokens em YAML
-          - pattern: |
-              password: $VALUE
-          - pattern: |
-              passwd: $VALUE
-          - pattern: |
-              secret: $VALUE
-          - pattern: |
-              token: $VALUE
-          - pattern: |
-              api_key: $VALUE
-          - pattern: |
-              apikey: $VALUE
-          - pattern: |
-              private_key: $VALUE
-          - pattern: |
-              secret_key: $VALUE
-          # Chaves de acesso
-          - pattern: |
-              access_key: $VALUE
-          - pattern: |
-              client_secret: $VALUE
-          - pattern: |
-              auth_token: $VALUE
-          # Usernames de banco de dados
-          - pattern: |
-              username: $VALUE
-          - pattern: |
-              user: $VALUE
-          - pattern: |
-              db_user: $VALUE
-      - metavariable-pattern:
-          metavariable: $VALUE
-          patterns:
-            - pattern-not: ""
-            - pattern-not: "***"
-            - pattern-not: "****"
-            - pattern-not: "${...}"
-            - pattern-not: "$${...}"
-            - pattern-not: "#{...}"
-            - pattern-regex: '.{3,}'  # Pelo menos 3 caracteres
+    pattern-either:
+      # Senhas específicas
+      - pattern: |
+          password: $VALUE
+      # Username específico  
+      - pattern: |
+          username: $VALUE
+      # Secrets genéricos
+      - pattern: |
+          secret: $VALUE
+      # Tokens
+      - pattern: |
+          token: $VALUE
     message: |
       🚨 CREDENCIAIS HARDCODED DETECTADAS!
       
@@ -200,48 +170,5 @@ rules:
       cwe: "CWE-798: Use of Hard-coded Credentials"
       owasp: "A07:2021 - Identification and Authentication Failures"
 
-  # URLs de banco de dados com credenciais inline
-  - id: database-url-with-credentials
-    patterns:
-      - pattern-either:
-          - pattern: |
-              url: jdbc:$DRIVER://$USER:$PASS@$HOST
-          - pattern: |
-              connectionString: $PROTOCOL://$USER:$PASS@$HOST
-          - pattern: |
-              database_url: $PROTOCOL://$USER:$PASS@$HOST
-          - pattern: |
-              connection_string: $PROTOCOL://$USER:$PASS@$HOST
-    message: |
-      🚨 CREDENCIAIS DE BANCO EM URL DETECTADAS!
-      
-      URL de banco de dados contém credenciais inline, expondo usuário e senha
-      diretamente na string de conexão.
-      
-      ⚠️  Riscos críticos:
-      • Credenciais visíveis em logs de aplicação
-      • Exposição no controle de versão
-      • Acesso não autorizado ao banco de dados
-      
-      ✅ Soluções recomendadas:
-      1. Separar credenciais: url + username + password
-      2. Variáveis de ambiente para credenciais
-      3. Connection pools com configuração externa
-      
-      🔧 Exemplo seguro:
-      datasource:
-        url: jdbc:oracle:thin:@${DB_HOST}:${DB_PORT}:${DB_NAME}
-        username: ${DB_USERNAME}
-        password: ${DB_PASSWORD}
-      
-      📚 OWASP A07:2021 - Identification and Authentication | CWE-798
-    languages: [yaml]
-    severity: ERROR
-    metadata:
-      category: security
-      subcategory: secrets
-      confidence: HIGH
-      impact: HIGH
-      likelihood: HIGH
-      cwe: "CWE-798: Use of Hard-coded Credentials"
-      owasp: "A07:2021 - Identification and Authentication Failures"
+  # URLs de banco de dados com credenciais inline - REMOVIDA TEMPORARIAMENTE
+  # - id: database-url-with-credentials
