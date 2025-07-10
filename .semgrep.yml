@@ -1,18 +1,19 @@
 rules:
-  - id: custom-js-sql-injection-vars
-    languages: [javascript]
+  - id: custom-js-sql-injection-concat
+    languages:
+      - javascript
     severity: ERROR
     message: |
       🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada.
-      
-      Query SQL construída com concatenação de string em uma variável com nome 
-      sugestivo (query/sql). Use Prepared Statements.
+      Uma query SQL foi construída dinamicamente usando concatenação de strings,
+      o que é uma prática perigosa. Utilize Prepared Statements ou ORMs
+      para garantir a segurança.
     patterns:
       - pattern-either:
           - pattern: |
-              $QUERY = "... " + $INPUT;
+              $VAR = "... " + $INPUT
           - pattern: |
-              $QUERY = `...` + $INPUT;
+              $VAR = `... ${...} ...`
       - metavariable-regex:
-          metavariable: $QUERY
+          metavariable: $VAR
           regex: (?i)query|sql

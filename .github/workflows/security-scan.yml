@@ -24,27 +24,29 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 'Run Semgrep Scan'
+        id: semgrep_scan
+        continue-on-error: true
         run: |
+          set +e
           docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
             semgrep scan --config "p/default" --config .semgrep.yml --sarif -o semgrep-results.sarif --error src/
+          SEMGREP_EXIT_CODE=$?
+          echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
+          set -e
 
-      - name: 'Upload SARIF file'
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-sarif-report
-          path: semgrep-results.sarif
-          retention-days: 7
-
-      - name: 'Generate HTML Report'
-        if: success()
+      - name: 'Generate and Upload Reports'
         run: |
-          echo "Semgrep scan passed. Generating HTML report..."
+          echo "Gerando relatorio HTML..."
           python3 scripts/generate_html_report.py semgrep-results.sarif semgrep-report.html
-
-      - name: 'Upload HTML report'
-        if: success()
-        uses: actions/upload-artifact@v4
+        
+      - uses: actions/upload-artifact@v4
         with:
           name: semgrep-html-report
           path: semgrep-report.html
           retention-days: 7
+
+      - name: 'Check for vulnerabilities and fail workflow'
+        if: steps.semgrep_scan.outputs.exit_code == '1'
+        run: |
+          echo "::error::O PR foi recusado pois ha vulnerabilidades criticas a serem resolvidas."
+          exit 1
