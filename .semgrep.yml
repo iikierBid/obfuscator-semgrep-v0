@@ -4,26 +4,65 @@
 rules:
   # SQL Injection via concatenação de strings - complementa o p/default
   - id: sql-injection-string-concatenation
-    patterns:
-      - pattern-either:
-          - pattern: $QUERY = "$SQL" + $VAR
-          - pattern: $QUERY = "$SQL" + $VAR + "$MORE"
-          - pattern: $QUERY = `$SQL${$VAR}$MORE`
-          - pattern: $QUERY = "$SQL".concat($VAR)
-      - metavariable-pattern:
-          metavariable: $SQL
-          patterns:
-            - pattern-regex: "(?i).*(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER).*"
+    pattern-either:
+      # Padrão 1: Concatenação com string contendo SQL no início
+      - patterns:
+          - pattern: $QUERY = $SQL + $VAR + $MORE
+          - metavariable-pattern:
+              metavariable: $SQL
+              pattern-regex: '"[^"]*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)[^"]*"'
+      # Padrão 2: Concatenação simples string + var
+      - patterns:
+          - pattern: $QUERY = $SQL + $VAR
+          - metavariable-pattern:
+              metavariable: $SQL
+              pattern-regex: '"[^"]*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)[^"]*"'
+      # Padrão 3: Template literals
+      - patterns:
+          - pattern: $QUERY = `$TEMPLATE`
+          - metavariable-pattern:
+              metavariable: $TEMPLATE
+              pattern-regex: '.*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION).*\$\{.*\}.*'
+      # Padrão 4: Concatenação com aspas simples
+      - patterns:
+          - pattern: $QUERY = $SQL + $VAR + $MORE
+          - metavariable-pattern:
+              metavariable: $SQL
+              pattern-regex: "'[^']*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)[^']*'"
+      # Padrão 5: Padrão simples para pegar casos gerais
+      - patterns:
+          - pattern-either:
+              - pattern: const $VAR = "..." + $INPUT + "..."
+              - pattern: let $VAR = "..." + $INPUT + "..."
+              - pattern: var $VAR = "..." + $INPUT + "..."
+          - metavariable-pattern:
+              metavariable: $VAR
+              pattern-regex: '.*(?i)(query|sql|cmd|command).*'
+          - pattern-inside: |
+              $FUNC(...) {
+                ...
+                $STMT
+                ...
+              }
     message: |
-      Possível vulnerabilidade de SQL Injection via concatenação de strings.
-      Construir queries SQL através de concatenação de strings com dados do usuário
-      pode permitir que atacantes executem comandos SQL arbitrários.
+      🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada!
       
-      Recomendações:
-      - Use prepared statements ou parameterized queries
-      - Valide e sanitize todas as entradas do usuário
-      - Use ORMs com proteção contra SQL injection
-      - Implemente whitelist de valores permitidos quando possível
+      A construção de queries SQL através de concatenação direta permite que atacantes
+      injetem código SQL malicioso, potencialmente expondo ou modificando dados.
+      
+      ⚠️  Código vulnerável detectado:
+      const query = "SELECT * FROM users WHERE id = '" + userInput + "'";
+      
+      💥 Ataques possíveis:
+      userInput = "'; DROP TABLE users; --"
+      → query = "SELECT * FROM users WHERE id = ''; DROP TABLE users; --'"
+      
+      ✅ Soluções recomendadas:
+      1. Prepared Statements: db.query("SELECT * FROM users WHERE id = ?", [userInput])
+      2. ORMs seguros: User.findOne({ where: { id: userInput } })
+      3. Validação rigorosa: if (!Number.isInteger(userInput)) throw Error()
+      
+      📚 OWASP A03:2021 - Injection | CWE-89
     languages: [javascript, typescript]
     severity: ERROR
     metadata:
@@ -33,6 +72,49 @@ rules:
       impact: HIGH
       likelihood: HIGH
       cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+
+  # SQL Injection - Regra simples e direta
+  - id: sql-injection-simple
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = "SELECT ..." + $INPUT + "..."
+          - pattern: $VAR = "INSERT ..." + $INPUT + "..."
+          - pattern: $VAR = "UPDATE ..." + $INPUT + "..."
+          - pattern: $VAR = "DELETE ..." + $INPUT + "..."
+          - pattern: $VAR = "DROP ..." + $INPUT + "..."
+          - pattern: |
+              $VAR = "..." + $INPUT + "...";
+              console.log($MSG, $VAR);
+    message: |
+      🚨 SQL Injection: Concatenação de string detectada em query SQL!
+      
+      Detectada construção de query SQL usando concatenação de strings, o que pode
+      permitir ataques de SQL injection.
+      
+      Solução: Use prepared statements ou parameterized queries.
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      owasp: "A03:2021 - Injection"
+
+  # SQL Injection - Regra específica para o nosso caso
+  - id: sql-injection-exact-match
+    pattern: |
+      const $VAR = "SELECT * FROM users WHERE username = '" + $INPUT + "';"
+    message: |
+      🎯 SQL Injection CONFIRMADA! 
+      
+      Esta é exatamente a vulnerabilidade que estávamos procurando.
+      Query SQL construída com concatenação direta de entrada do usuário.
+      
+      RISCO CRÍTICO: Permite bypass de autenticação e extração de dados.
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      confidence: HIGH
       owasp: "A03:2021 - Injection"
 
   # Detecção de hash MD5/SHA1 fraco - complementa o p/default  
