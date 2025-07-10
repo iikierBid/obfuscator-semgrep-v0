@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Segurança - Semgrep</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #007bff;
+        }
+        .result {
+            border: 1px solid #e9ecef;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #ffffff;
+        }
+        .result.error {
+            border-left: 5px solid #dc3545;
+            background-color: #fff5f5;
+        }
+        .result.warning {
+            border-left: 5px solid #fd7e14;
+            background-color: #fffaf0;
+        }
+        .result.info {
+            border-left: 5px solid #17a2b8;
+            background-color: #f0f8ff;
+        }
+        .rule-id {
+            font-weight: 600;
+            color: #495057;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin: 15px 0;
+            line-height: 1.6;
+            color: #333;
+        }
+        .location {
+            font-size: 0.9em;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        .no-issues {
+            text-align: center;
+            padding: 60px 20px;
+            color: #28a745;
+        }
+        .no-issues h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+        .severity-error {
+            background-color: #dc3545;
+            color: white;
+        }
+        .severity-warning {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .severity-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Relatório de Segurança</h1>
+            <p>Análise realizada com Semgrep em 10/07/2025 às 15:13:17</p>
+        </div>
+        <div class="content">
+
+            <div class="summary">
+                <h2>📊 Resumo da Análise</h2>
+                <p><strong>Total de problemas encontrados:</strong> 10</p>
+                <p>
+                    <strong>Críticos:</strong> 8 | 
+                    <strong>Avisos:</strong> 2 | 
+                    <strong>Informativos:</strong> 0
+                </p>
+            </div>
+                <h2>🔍 Detalhes dos Problemas</h2>
+                <div class="result error">
+                    <div class="rule-id">
+                        hardcoded-credentials-yaml
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">🚨 CREDENCIAIS HARDCODED DETECTADAS!
+
+Encontradas credenciais sensíveis (senhas, tokens, chaves) hardcoded em arquivo
+de configuração. Isso representa um risco crítico de segurança.
+
+⚠️  Riscos:
+• Exposição de credenciais no controle de versão (Git)
+• Acesso não autorizado a sistemas e bancos de dados
+• Violação de compliance e regulamentações
+
+✅ Soluções recomendadas:
+1. Variáveis de ambiente: password: ${DB_PASSWORD}
+2. Vaults seguros: HashiCorp Vault, AWS Secrets Manager
+3. Ferramentas de config: Spring Cloud Config, Kubernetes Secrets
+4. Nunca committar credenciais reais no código
+
+🔧 Exemplo seguro:
+datasource:
+  username: ${DB_USERNAME:defaultuser}
+  password: ${DB_PASSWORD}
+
+📚 OWASP A07:2021 - Identification and Authentication | CWE-798
+</div>
+                        
+                    <div class="location">
+                        📁 application-stg.yml | 📍 Linha 62
+                    </div>
+                                        </div>
+                <div class="result error">
+                    <div class="rule-id">
+                        hardcoded-credentials-yaml
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">🚨 CREDENCIAIS HARDCODED DETECTADAS!
+
+Encontradas credenciais sensíveis (senhas, tokens, chaves) hardcoded em arquivo
+de configuração. Isso representa um risco crítico de segurança.
+
+⚠️  Riscos:
+• Exposição de credenciais no controle de versão (Git)
+• Acesso não autorizado a sistemas e bancos de dados
+• Violação de compliance e regulamentações
+
+✅ Soluções recomendadas:
+1. Variáveis de ambiente: password: ${DB_PASSWORD}
+2. Vaults seguros: HashiCorp Vault, AWS Secrets Manager
+3. Ferramentas de config: Spring Cloud Config, Kubernetes Secrets
+4. Nunca committar credenciais reais no código
+
+🔧 Exemplo seguro:
+datasource:
+  username: ${DB_USERNAME:defaultuser}
+  password: ${DB_PASSWORD}
+
+📚 OWASP A07:2021 - Identification and Authentication | CWE-798
+</div>
+                        
+                    <div class="location">
+                        📁 application-stg.yml | 📍 Linha 63
+                    </div>
+                                        </div>
+                <div class="result error">
+                    <div class="rule-id">
+                        generic.secrets.security.detected-stripe-api-key.detected-stripe-api-key
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">Stripe API Key detected</div>
+                        
+                    <div class="location">
+                        📁 src/app.js | 📍 Linha 5
+                    </div>
+                                        </div>
+                <div class="result error">
+                    <div class="rule-id">
+                        generic.secrets.security.detected-picatic-api-key.detected-picatic-api-key
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">Picatic API Key detected</div>
+                        
+                    <div class="location">
+                        📁 src/app.js | 📍 Linha 5
+                    </div>
+                                        </div>
+                <div class="result warning">
+                    <div class="rule-id">
+                        javascript.browser.security.eval-detected.eval-detected
+                        <span class="severity-badge severity-warning">warning</span>
+                    </div>
+                    <div class="message">Detected the use of eval(). eval() can be dangerous if used to evaluate dynamic content. If this content can be input from outside the program, this may be a code injection vulnerability. Ensure evaluated content is not definable by external sources.</div>
+                        
+                    <div class="location">
+                        📁 src/app.js | 📍 Linha 13
+                    </div>
+                                        </div>
+                <div class="result error">
+                    <div class="rule-id">
+                        javascript.browser.security.insecure-document-method.insecure-document-method
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">User controlled data in methods like `innerHTML`, `outerHTML` or `document.write` is an anti-pattern that can lead to XSS vulnerabilities</div>
+                        
+                    <div class="location">
+                        📁 src/app.js | 📍 Linha 19
+                    </div>
+                                        </div>
+                <div class="result error">
+                    <div class="rule-id">
+                        sql-injection-detection
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada!
+
+A construção de queries SQL através de concatenação direta permite que atacantes
+injetem código SQL malicioso, comprometendo a segurança do banco de dados.
+
+⚠️  Exemplo de ataque:
+userInput = &quot;&#x27;; DROP TABLE users; --&quot;
+→ query = &quot;SELECT * FROM users WHERE id = &#x27;&#x27;; DROP TABLE users; --&#x27;&quot;
+
+✅ Soluções recomendadas:
+1. Prepared Statements: db.query(&quot;SELECT * FROM users WHERE id = ?&quot;, [userInput])
+2. ORMs seguros: User.findOne({ where: { id: userInput } })
+3. Validação rigorosa de entradas
+4. Sanitização com whitelist de caracteres permitidos
+
+📚 OWASP A03:2021 - Injection | CWE-89
+</div>
+                        
+                    <div class="location">
+                        📁 src/storage.js | 📍 Linha 40
+                    </div>
+                                        </div>
+                <div class="result error">
+                    <div class="rule-id">
+                        sql-injection-detection
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada!
+
+A construção de queries SQL através de concatenação direta permite que atacantes
+injetem código SQL malicioso, comprometendo a segurança do banco de dados.
+
+⚠️  Exemplo de ataque:
+userInput = &quot;&#x27;; DROP TABLE users; --&quot;
+→ query = &quot;SELECT * FROM users WHERE id = &#x27;&#x27;; DROP TABLE users; --&#x27;&quot;
+
+✅ Soluções recomendadas:
+1. Prepared Statements: db.query(&quot;SELECT * FROM users WHERE id = ?&quot;, [userInput])
+2. ORMs seguros: User.findOne({ where: { id: userInput } })
+3. Validação rigorosa de entradas
+4. Sanitização com whitelist de caracteres permitidos
+
+📚 OWASP A03:2021 - Injection | CWE-89
+</div>
+                        
+                    <div class="location">
+                        📁 src/storage.js | 📍 Linha 40
+                    </div>
+                                        </div>
+                <div class="result warning">
+                    <div class="rule-id">
+                        weak-hash-algorithms
+                        <span class="severity-badge severity-warning">warning</span>
+                    </div>
+                    <div class="message">Uso de algoritmo de hash criptograficamente fraco detectado.
+MD5 e SHA1 são considerados inseguros devido a vulnerabilidades de colisão conhecidas.
+
+Recomendações:
+- Use SHA-256, SHA-3, ou BLAKE2 para novos projetos
+- Para senhas, use bcrypt, scrypt, ou Argon2
+- Para assinaturas digitais, use SHA-256 ou superior
+</div>
+                        
+                    <div class="location">
+                        📁 src/storage.js | 📍 Linha 50
+                    </div>
+                                        </div>
+                <div class="result error">
+                    <div class="rule-id">
+                        javascript.browser.security.insecure-document-method.insecure-document-method
+                        <span class="severity-badge severity-error">error</span>
+                    </div>
+                    <div class="message">User controlled data in methods like `innerHTML`, `outerHTML` or `document.write` is an anti-pattern that can lead to XSS vulnerabilities</div>
+                        
+                    <div class="location">
+                        📁 src/ui.js | 📍 Linha 130
+                    </div>
+                                        </div>
+        </div>
+    </div>
+</body>
+</html>
