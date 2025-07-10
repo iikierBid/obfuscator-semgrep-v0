@@ -10,9 +10,11 @@ rules:
       Query SQL construída com concatenação de strings. Use prepared statements.
     patterns:
       - pattern-either:
-          - pattern: const $VAR = "SELECT * FROM $TABLE WHERE $COLUMN = " + $INPUT
-          - pattern: const $VAR = `SELECT * FROM $TABLE WHERE $COLUMN = '${$INPUT}'`
-          - pattern: const $VAR = "INSERT INTO $TABLE ($COLUMNS) VALUES ('" + $INPUT + "')"
+          - pattern: |
+              $VAR = "..." + $INPUT
+          - pattern: |
+              $VAR = `...${$INPUT}...`
+      - pattern-regex: (?i)(SELECT|INSERT|UPDATE|DELETE)
 
   # ================================  
   # HARDCODED CREDENTIALS - Specific variable names
@@ -28,13 +30,6 @@ rules:
           - pattern: const DATABASE_PASSWORD = "..."
           - pattern: const API_SECRET = "..." 
           - pattern: const ENCRYPTION_KEY = "..."
-          - pattern: const $VAR_PASSWORD = "..."
-          - pattern: const $VAR_SECRET = "..."
-          - pattern: const $VAR_KEY = "..."
-          - pattern: const $VAR_TOKEN = "..."
-      - metavariable-regex:
-          metavariable: $VAR
-          regex: (?i).*(PASSWORD|SECRET|KEY|TOKEN|API).*
 
   # ================================
   # WEAK CRYPTO - SHA1 in JavaScript
