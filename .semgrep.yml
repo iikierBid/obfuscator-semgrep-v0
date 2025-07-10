@@ -1,63 +1,125 @@
 rules:
-  # SQL Injection - Concatenação de strings com palavras SQL
-  - id: sql-injection-string-concat
-    languages:
-      - javascript
-      - typescript
-      - python
-      - java
-      - csharp
-      - php
-      - go
-      - ruby
+  # ================================
+  # SQL INJECTION - String concatenation in SQL queries
+  # ================================
+  - id: js-sql-injection-concat
+    languages: [javascript, typescript]
     severity: ERROR
     message: |
       🚨 SQL INJECTION DETECTADA!
-      Query SQL sendo construída com concatenação de strings.
-      Use prepared statements para evitar ataques de injeção.
+      Query SQL construída com concatenação de strings. Use prepared statements.
     patterns:
       - pattern-either:
-          - pattern: |
-              "..." + $VAR
-          - pattern: |
-              $VAR + "..."
-          - pattern: |
-              f"...{$VAR}..."
-          - pattern: |
-              `...${$VAR}...`
-          - pattern: |
-              "..." % $VAR
-      - pattern-regex: (?i)(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)
+          - pattern: const $VAR = "SELECT * FROM $TABLE WHERE $COLUMN = " + $INPUT
+          - pattern: const $VAR = `SELECT * FROM $TABLE WHERE $COLUMN = '${$INPUT}'`
+          - pattern: const $VAR = "INSERT INTO $TABLE ($COLUMNS) VALUES ('" + $INPUT + "')"
 
-  # Credenciais Hardcoded
-  - id: hardcoded-credentials-universal
-    languages:
-      - javascript
-      - typescript
-      - python
-      - java
-      - csharp
-      - php
-      - go
-      - ruby
-      - yaml
-      - json
+  # ================================  
+  # HARDCODED CREDENTIALS - Specific variable names
+  # ================================
+  - id: js-hardcoded-credentials
+    languages: [javascript, typescript]
     severity: ERROR
     message: |
       🚨 CREDENCIAL HARDCODED DETECTADA!
-      Credencial sensível encontrada no código. Use variáveis de ambiente.
+      Credencial sensível hardcoded no código. Use variáveis de ambiente.
     patterns:
       - pattern-either:
-          - pattern: |
-              $VAR = "..."
-          - pattern: |
-              const $VAR = "..."
-          - pattern: |
-              let $VAR = "..."
-          - pattern: |
-              var $VAR = "..."
-          - pattern: |
-              $VAR: "..."
+          - pattern: const DATABASE_PASSWORD = "..."
+          - pattern: const API_SECRET = "..." 
+          - pattern: const ENCRYPTION_KEY = "..."
+          - pattern: const $VAR_PASSWORD = "..."
+          - pattern: const $VAR_SECRET = "..."
+          - pattern: const $VAR_KEY = "..."
+          - pattern: const $VAR_TOKEN = "..."
       - metavariable-regex:
           metavariable: $VAR
           regex: (?i).*(PASSWORD|SECRET|KEY|TOKEN|API).*
+
+  # ================================
+  # WEAK CRYPTO - SHA1 in JavaScript
+  # ================================
+  - id: js-weak-sha1-hash
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: |
+      ⚠️ ALGORITMO DE HASH FRACO!
+      SHA1 é considerado inseguro. Use SHA-256 ou superior.
+    patterns:
+      - pattern: crypto.createHash('sha1')
+
+  # ================================
+  # INSECURE RANDOM - Math.random for security
+  # ================================
+  - id: js-insecure-random
+    languages: [javascript, typescript]  
+    severity: WARNING
+    message: |
+      ⚠️ GERADOR ALEATÓRIO INSEGURO!
+      Math.random() não é criptograficamente seguro. Use crypto.randomBytes().
+    patterns:
+      - pattern: Math.random()
+
+  # ================================
+  # CORS MISCONFIGURATION
+  # ================================
+  - id: js-cors-wildcard
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      🚨 CONFIGURAÇÃO CORS INSEGURA!
+      Origin '*' permite acesso de qualquer domínio. Especifique domínios confiáveis.
+    patterns:
+      - pattern-either:
+          - pattern: res.header('Access-Control-Allow-Origin', '*')
+          - pattern: res.setHeader('Access-Control-Allow-Origin', '*')
+
+  # ================================
+  # REGEX DOS - Vulnerable regex patterns
+  # ================================
+  - id: js-regex-dos
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: |
+      ⚠️ REGEX VULNERÁVEL A DOS!
+      Padrão regex com backtracking exponencial pode causar negação de serviço.
+    patterns:
+      - pattern-either:
+          - pattern: /^(a+)+$/
+          - pattern: /(a+)+/
+
+  # ================================
+  # NOSQL INJECTION - MongoDB $where
+  # ================================  
+  - id: js-nosql-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      🚨 NOSQL INJECTION DETECTADA!
+      Uso de $where com input não validado permite injeção de código.
+    patterns:
+      - pattern: "{ $where: $INPUT }"
+
+  # ================================
+  # PROTOTYPE POLLUTION
+  # ================================
+  - id: js-prototype-pollution
+    languages: [javascript, typescript]
+    severity: ERROR  
+    message: |
+      🚨 PROTOTYPE POLLUTION DETECTADA!
+      Modificação dinâmica de propriedades pode afetar protótipos globalmente.
+    patterns:
+      - pattern: $OBJ[$KEY] = $VALUE
+
+  # ================================
+  # UNSAFE BUFFER ALLOCATION
+  # ================================
+  - id: js-unsafe-buffer
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: |
+      ⚠️ ALOCAÇÃO DE BUFFER INSEGURA!
+      Buffer.allocUnsafe() pode conter dados residuais. Use Buffer.alloc().
+    patterns:
+      - pattern: Buffer.allocUnsafe($SIZE) 

@@ -29,7 +29,7 @@ jobs:
         run: |
           set +e
           docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
-            semgrep scan --config "p/default" --sarif -o semgrep-results.sarif --error src/
+            semgrep scan --config "p/default" --config .semgrep.yml --sarif -o semgrep-results.sarif --error src/
           SEMGREP_EXIT_CODE=$?
           echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
           set -e
