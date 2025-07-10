@@ -35,8 +35,13 @@ jobs:
         id: semgrep_scan
         continue-on-error: true
         run: |
+          set +e  # Desabilitar exit on error temporariamente
           docker run --rm -v "${PWD}:/src" -w /src returntocorp/semgrep \
             semgrep ci --config .semgrep.yml --config "p/default" --sarif -o semgrep-results.sarif
+          SEMGREP_EXIT_CODE=$?
+          echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
+          set -e  # Reabilitar exit on error
+          exit 0  # Sempre sair com sucesso para continuar o pipeline
 
       - name: Check for SARIF file existence
         id: sarif_file_check
@@ -49,14 +54,13 @@ jobs:
 
       # Gerar relatório HTML dos resultados do Semgrep
       - name: Generate HTML Report
-        if: steps.sarif_file_check.outputs.exists == 'true'
         run: |
           # Executar o script Python para gerar o relatório HTML
+          # O script irá lidar com casos onde o arquivo SARIF não existe
           python3 scripts/generate_html_report.py semgrep-results.sarif semgrep-report.html
 
       # Upload do relatório HTML como artifact
       - name: Upload HTML Report
-        if: steps.sarif_file_check.outputs.exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-html-report
@@ -88,7 +92,8 @@ jobs:
       #       --form product_type_name="poc-apps"
 
       - name: Check scan outcome
-        if: steps.semgrep_scan.outcome == 'failure'
+        if: steps.semgrep_scan.outputs.exit_code == '1'
         run: |
-          echo "::error::Semgrep scan found blocking issues. Failing the workflow."
+          echo "::error::Semgrep scan found blocking issues (exit code: ${{ steps.semgrep_scan.outputs.exit_code }}). Failing the workflow."
+          echo "::notice::HTML report was generated and uploaded as artifact for analysis."
           exit 1

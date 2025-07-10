@@ -19,16 +19,18 @@ def generate_html_report(sarif_file_path, output_file_path):
     
     # Verificar se o arquivo SARIF existe
     if not Path(sarif_file_path).exists():
-        print(f"Erro: Arquivo SARIF não encontrado: {sarif_file_path}")
-        sys.exit(1)
-    
-    try:
-        # Ler o arquivo SARIF
-        with open(sarif_file_path, 'r', encoding='utf-8') as f:
-            sarif_data = json.load(f)
-    except Exception as e:
-        print(f"Erro ao ler arquivo SARIF: {e}")
-        sys.exit(1)
+        print(f"⚠️  Arquivo SARIF não encontrado: {sarif_file_path}")
+        print("📄 Gerando relatório HTML indicando que a análise não foi executada...")
+        sarif_data = None
+    else:
+        try:
+            # Ler o arquivo SARIF
+            with open(sarif_file_path, 'r', encoding='utf-8') as f:
+                sarif_data = json.load(f)
+        except Exception as e:
+            print(f"⚠️  Erro ao ler arquivo SARIF: {e}")
+            print("📄 Gerando relatório HTML indicando erro na análise...")
+            sarif_data = None
     
     # Criar HTML básico
     html_content = f'''<!DOCTYPE html>
@@ -161,7 +163,7 @@ def generate_html_report(sarif_file_path, output_file_path):
     total_issues = 0
     issues_by_severity = {'error': 0, 'warning': 0, 'info': 0}
     
-    if 'runs' in sarif_data and sarif_data['runs']:
+    if sarif_data and 'runs' in sarif_data and sarif_data['runs']:
         for run in sarif_data['runs']:
             if 'results' in run and run['results']:
                 # Construir um mapa das regras para obter severidades
@@ -277,6 +279,14 @@ def generate_html_report(sarif_file_path, output_file_path):
                 <p>Nenhum problema de segurança foi encontrado na análise.</p>
             </div>
                 '''
+    elif sarif_data is None:
+        html_content += '''
+        <div class="no-issues">
+            <h2>⚠️ Erro na Análise</h2>
+            <p>Não foi possível executar ou processar a análise do Semgrep.</p>
+            <p>Verifique os logs do pipeline para mais detalhes.</p>
+        </div>
+        '''
     else:
         html_content += '''
         <div class="no-issues">
