@@ -1,103 +1,54 @@
-# Configuração genérica do Semgrep para múltiplos projetos
-# Este arquivo pode ser personalizado para cada projeto específico
+# Configuração complementar ao p/default do Semgrep
+# Estas regras cobrem lacunas específicas não cobertas pelo p/default
 
-# Rulesets a serem aplicados (auto-detecta linguagens)
 rules:
-  # Regras genéricas de segurança - aplicáveis a qualquer linguagem
-  - id: hardcoded-secret-detection
-    patterns:
-      - pattern-either:
-          - pattern: password = "$SECRET"
-          - pattern: token = "$SECRET"
-          - pattern: api_key = "$SECRET"
-          - pattern: secret = "$SECRET"
-          - pattern: key = "$SECRET"
-      - metavariable-pattern:
-          metavariable: $SECRET
-          patterns:
-            - pattern-not: ""
-            - pattern-not: "..."
-            - pattern-not: "TODO"
-            - pattern-not: "CHANGE_ME"
-            - pattern-regex: '.{8,}'
+  # SQL Injection - Regra unificada e robusta 
+  - id: sql-injection-detection
+    pattern-either:
+      # Concatenação básica com keywords SQL
+      - patterns:
+          - pattern-either:
+              - pattern: const $VAR = $STR + $INPUT + $MORE
+              - pattern: let $VAR = $STR + $INPUT + $MORE  
+              - pattern: var $VAR = $STR + $INPUT + $MORE
+              - pattern: $VAR = $STR + $INPUT + $MORE
+          - metavariable-pattern:
+              metavariable: $STR
+              pattern-regex: '"[^"]*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|FROM|WHERE)[^"]*"'
+      # Template literals com SQL
+      - patterns:
+          - pattern: $VAR = `$TEMPLATE`
+          - metavariable-pattern:
+              metavariable: $TEMPLATE
+              pattern-regex: '.*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION).*\$\{.*\}.*'
+      # Concatenação com aspas simples
+      - patterns:
+          - pattern-either:
+              - pattern: const $VAR = $STR + $INPUT + $MORE
+              - pattern: let $VAR = $STR + $INPUT + $MORE  
+              - pattern: var $VAR = $STR + $INPUT + $MORE
+              - pattern: $VAR = $STR + $INPUT + $MORE
+          - metavariable-pattern:
+              metavariable: $STR
+              pattern-regex: "'[^']*(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|FROM|WHERE)[^']*'"
     message: |
-      Possível credencial hardcoded detectada.
+      🚨 VULNERABILIDADE CRÍTICA: SQL Injection detectada!
       
-      Riscos de segurança:
-      - Exposição de credenciais no código-fonte
-      - Acesso não autorizado a sistemas
-      - Dificuldade de rotação de credenciais
+      A construção de queries SQL através de concatenação direta permite que atacantes
+      injetem código SQL malicioso, comprometendo a segurança do banco de dados.
       
-      Melhores práticas:
-      - Use variáveis de ambiente para credenciais
-      - Implemente gerenciamento de segredos (HashiCorp Vault, AWS Secrets Manager)
-      - Nunca commite credenciais no repositório
-      - Use ferramentas como git-secrets para prevenção
-    languages: [javascript, python, java, go, ruby, php, typescript, yaml, json]
-    severity: ERROR
-    metadata:
-      category: security
-      subcategory: secrets
-      confidence: HIGH
-      impact: HIGH
-      likelihood: HIGH
-      cwe: "CWE-798: Use of Hard-coded Credentials"
-      owasp: "A02:2021 - Cryptographic Failures"
-
-  - id: generic-high-entropy-secret
-    message: |
-      Possível segredo de alta entropia detectado.
-      Um valor com alta aleatoriedade foi encontrado, o que é característico de chaves de API, tokens e outras credenciais.
+      ⚠️  Exemplo de ataque:
+      userInput = "'; DROP TABLE users; --"
+      → query = "SELECT * FROM users WHERE id = ''; DROP TABLE users; --'"
       
-      Riscos:
-      - Exposição de credenciais que dão acesso a sistemas críticos.
+      ✅ Soluções recomendadas:
+      1. Prepared Statements: db.query("SELECT * FROM users WHERE id = ?", [userInput])
+      2. ORMs seguros: User.findOne({ where: { id: userInput } })
+      3. Validação rigorosa de entradas
+      4. Sanitização com whitelist de caracteres permitidos
       
-      Ação Recomendada:
-      - Verifique se este valor é realmente um segredo.
-      - Se for, remova-o do código-fonte e armazene-o de forma segura, como em um gerenciador de segredos (ex: AWS Secrets Manager, HashiCorp Vault) ou em variáveis de ambiente.
-    metadata:
-      category: security
-      subcategory: secrets
-      confidence: MEDIUM
-      impact: HIGH
-      likelihood: MEDIUM
-      owasp: "A02:2021 - Cryptographic Failures"
-      cwe: "CWE-798: Use of Hard-coded Credentials"
-    severity: WARNING
-    languages:
-      - generic
-    patterns:
-      - pattern-regex: (?i)['"][a-z0-9\-_.~+/=]{40,}['"]
-      - pattern-not-regex: (?i)'.*https?://.*'
-      - pattern-not-regex: (?i)".*https?://.*"
-      - pattern-not-regex: (?i)(jwt|bearer|token)
-      - pattern-not-regex: (?i)sha(1|256|512)
-      - pattern-not-regex: (?i)md5
-      - pattern-not-regex: (?i)from.*import
-      - pattern-not-regex: (?i)BEGIN (RSA|OPENSSH) PRIVATE KEY
-
-  - id: generic-sql-injection
-    patterns:
-      - pattern-either:
-          - pattern: $QUERY = "$SQL" + $VAR
-          - pattern: $QUERY = "$SQL" + $VAR + "$MORE"
-          - pattern: $DB.query("$SQL" + $VAR)
-          - pattern: $DB.execute("$SQL" + $VAR)
-    message: |
-      Possível vulnerabilidade de SQL Injection detectada.
-      
-      Riscos de segurança:
-      - Execução de comandos SQL não autorizados
-      - Acesso a dados sensíveis
-      - Modificação/exclusão de dados
-      - Bypass de autenticação
-      
-      Melhores práticas:
-      - Use prepared statements/parameterized queries
-      - Valide e sanitize todas as entradas
-      - Implemente o princípio do menor privilégio no banco
-      - Use ORMs com proteção contra SQL injection
-    languages: [javascript, python, java, go, ruby, php, typescript]
+      📚 OWASP A03:2021 - Injection | CWE-89
+    languages: [javascript, typescript]
     severity: ERROR
     metadata:
       category: security
@@ -108,67 +59,116 @@ rules:
       cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
       owasp: "A03:2021 - Injection"
 
-  - id: generic-path-traversal
+  # Detecção de hash MD5/SHA1 fraco - complementa o p/default  
+  - id: weak-hash-algorithms
+    patterns:
+      - pattern-either:
+          - pattern: md5($DATA)
+          - pattern: sha1($DATA)
+          - pattern: crypto.createHash('md5')
+          - pattern: crypto.createHash('sha1')
+          - pattern: new MD5($DATA)
+          - pattern: new SHA1($DATA)
+    message: |
+      Uso de algoritmo de hash criptograficamente fraco detectado.
+      MD5 e SHA1 são considerados inseguros devido a vulnerabilidades de colisão conhecidas.
+      
+      Recomendações:
+      - Use SHA-256, SHA-3, ou BLAKE2 para novos projetos
+      - Para senhas, use bcrypt, scrypt, ou Argon2
+      - Para assinaturas digitais, use SHA-256 ou superior
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: crypto
+      confidence: HIGH
+      impact: MEDIUM
+      likelihood: MEDIUM
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  # Path Traversal genérico - complementa o p/default
+  - id: path-traversal-generic
     patterns:
       - pattern-either:
           - pattern: $PATH = $INPUT + "$FILE"
           - pattern: $PATH = "$DIR" + $INPUT
-          - pattern: open($INPUT)
-          - pattern: read($INPUT)
+          - pattern: fs.readFile($INPUT)
+          - pattern: fs.readFileSync($INPUT)
       - metavariable-pattern:
           metavariable: $INPUT
           patterns:
-            - pattern-either:
-              - pattern: req.params.$VAR
-              - pattern: request.params.$VAR
-              - pattern: $_GET["$VAR"]
-              - pattern: $_POST["$VAR"]
-              - pattern: args.$VAR
+            - pattern-regex: ".*\\.\\./.*"
     message: |
       Possível vulnerabilidade de Path Traversal detectada.
+      O uso de entrada do usuário para construir caminhos de arquivo pode permitir
+      acesso a arquivos fora do diretório pretendido.
       
-      Riscos de segurança:
-      - Acesso a arquivos fora do diretório pretendido
-      - Leitura de arquivos sensíveis do sistema
-      - Exposição de código-fonte e configurações
-      
-      Melhores práticas:
-      - Valide e sanitize nomes de arquivos
-      - Use whitelist de arquivos/diretórios permitidos
-      - Implemente controle de acesso baseado em função
-      - Normalize paths antes de usar
-    languages: [javascript, python, java, go, ruby, php, typescript]
+      Recomendações:
+      - Valide e normalize todos os caminhos de arquivo
+      - Use uma whitelist de arquivos/diretórios permitidos
+      - Implemente verificações de limite de diretório
+      - Use path.resolve() para normalizar caminhos
+    languages: [javascript, typescript]
     severity: ERROR
     metadata:
       category: security
       subcategory: path-traversal
-      confidence: HIGH
+      confidence: MEDIUM
       impact: HIGH
       likelihood: MEDIUM
       cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
       owasp: "A01:2021 - Broken Access Control"
 
-# Configurações específicas por projeto podem ser adicionadas aqui
-# Exemplo para projetos específicos:
-# 
-# Para projetos JavaScript/Node.js, adicione:
-# - p/javascript
-# - p/nodejs
-# - p/react (para React)
-# - p/express (para Express)
-#
-# Para projetos Python, adicione:
-# - p/python
-# - p/django (para Django)
-# - p/flask (para Flask)
-#
-# Para projetos Java, adicione:
-# - p/java
-# - p/spring (para Spring)
-#
-# Para projetos Go, adicione:
-# - p/golang
-#
-# Para projetos C#, adicione:
-# - p/csharp
-# - p/dotnet 
+  # Credenciais hardcoded em arquivos YAML - complementa o p/default
+  - id: hardcoded-credentials-yaml
+    pattern-either:
+      # Senhas específicas
+      - pattern: |
+          password: $VALUE
+      # Username específico  
+      - pattern: |
+          username: $VALUE
+      # Secrets genéricos
+      - pattern: |
+          secret: $VALUE
+      # Tokens
+      - pattern: |
+          token: $VALUE
+    message: |
+      🚨 CREDENCIAIS HARDCODED DETECTADAS!
+      
+      Encontradas credenciais sensíveis (senhas, tokens, chaves) hardcoded em arquivo
+      de configuração. Isso representa um risco crítico de segurança.
+      
+      ⚠️  Riscos:
+      • Exposição de credenciais no controle de versão (Git)
+      • Acesso não autorizado a sistemas e bancos de dados
+      • Violação de compliance e regulamentações
+      
+      ✅ Soluções recomendadas:
+      1. Variáveis de ambiente: password: ${DB_PASSWORD}
+      2. Vaults seguros: HashiCorp Vault, AWS Secrets Manager
+      3. Ferramentas de config: Spring Cloud Config, Kubernetes Secrets
+      4. Nunca committar credenciais reais no código
+      
+      🔧 Exemplo seguro:
+      datasource:
+        username: ${DB_USERNAME:defaultuser}
+        password: ${DB_PASSWORD}
+      
+      📚 OWASP A07:2021 - Identification and Authentication | CWE-798
+    languages: [yaml]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: secrets
+      confidence: HIGH
+      impact: HIGH
+      likelihood: HIGH
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+
+  # URLs de banco de dados com credenciais inline - REMOVIDA TEMPORARIAMENTE
+  # - id: database-url-with-credentials

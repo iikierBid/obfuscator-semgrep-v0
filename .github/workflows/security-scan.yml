@@ -1,0 +1,99 @@
+# Nome do Workflow para identificação na interface do GitHub Actions
+name: 'Security Scan - Semgrep'
+
+# Define os gatilhos (triggers) que iniciarão este workflow.
+on:
+  # Executa em todo push para qualquer branch
+  push:
+  # Executa em toda abertura ou atualização de um Pull Request.
+  pull_request:
+    branches: [ main, master ]
+  # Permite a execução manual pela interface do GitHub Actions.
+  workflow_dispatch:
+
+# Define os jobs que serão executados.
+jobs:
+  semgrep_scan:
+    # Nome do job, que aparecerá na UI do GitHub.
+    name: 'Semgrep Scan and Generate HTML Report'
+    # O job rodará na versão mais recente do Ubuntu fornecida pelo GitHub.
+    runs-on: ubuntu-latest
+
+    steps:
+      # Passo 1: Fazer o checkout do código do repositório.
+      # A ação 'actions/checkout@v4' baixa o seu código para o ambiente de execução.
+      - name: 'Checkout code'
+        uses: actions/checkout@v4
+
+      # Passo 2: Executar a análise do Semgrep.
+      # Este passo executa o mesmo comando Docker que validamos, com duas diferenças cruciais:
+      # --sarif: instrui o Semgrep a gerar os resultados no formato SARIF (Static Analysis Results Interchange Format), um padrão da indústria.
+      # -o semgrep-results.sarif: especifica o nome do arquivo de saída.
+      # continue-on-error: true é vital. Como o Semgrep retorna código '1' se encontra algo, isso impediria os próximos passos de rodarem.
+      # Com esta flag, o job continua mesmo se a análise "falhar", garantindo que sempre tentemos fazer o upload dos resultados.
+      - name: 'Run Semgrep Scan'
+        id: semgrep_scan
+        continue-on-error: true
+        run: |
+          set +e  # Desabilitar exit on error temporariamente
+          docker run --rm -v "${PWD}:/src" -w /src returntocorp/semgrep \
+            semgrep ci --config "p/default" --config "p/trailofbits" --config .semgrep.yml --sarif -o semgrep-results.sarif
+          SEMGREP_EXIT_CODE=$?
+          echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
+          set -e  # Reabilitar exit on error
+          exit 0  # Sempre sair com sucesso para continuar o pipeline
+
+      - name: Check for SARIF file existence
+        id: sarif_file_check
+        run: |
+          if [ -f "semgrep-results.sarif" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Gerar relatório HTML dos resultados do Semgrep
+      - name: Generate HTML Report
+        run: |
+          # Executar o script Python para gerar o relatório HTML
+          # O script irá lidar com casos onde o arquivo SARIF não existe
+          python3 scripts/generate_html_report.py semgrep-results.sarif semgrep-report.html
+
+      # Upload do relatório HTML como artifact
+      - name: Upload HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-html-report
+          path: semgrep-report.html
+          retention-days: 30
+
+      # Upload do arquivo SARIF como artifact também
+      - name: Upload SARIF Report
+        if: steps.sarif_file_check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif-report
+          path: semgrep-results.sarif
+          retention-days: 30
+
+      # COMENTADO: Upload para DefectDojo (não funcional ainda)
+      # - name: Upload to DefectDojo
+      #   if: steps.sarif_file_check.outputs.exists == 'true'
+      #   run: |
+      #     curl --request POST \
+      #       --url "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+      #       --header "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+      #       --form scan_type="SARIF" \
+      #       --form engagement_name="CI Scan - Run ${{ github.run_id }}" \
+      #       --form product_name="obfuscator-poc" \
+      #       --form auto_create_context=true \
+      #       --form file=@"semgrep-results.sarif" \
+      #       --form verified=true \
+      #       --form product_type_name="poc-apps"
+
+      - name: Check scan outcome
+        if: steps.semgrep_scan.outputs.exit_code == '1'
+        run: |
+          echo "::error::Semgrep scan found blocking issues (exit code: ${{ steps.semgrep_scan.outputs.exit_code }}). Failing the workflow."
+          echo "::notice::HTML report was generated and uploaded as artifact for analysis."
+          exit 1

@@ -31,3 +31,7 @@ Dockerfile
 
 # Source Maps (não devem ser públicos)
 dist/**/*.js.map 
+
+# Arquivos gerados pela análise de segurança
+semgrep-results.sarif
+semgrep-report.html 

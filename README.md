@@ -5,7 +5,7 @@ Este repositório contém uma prova de conceito (PoC) para demonstrar um fluxo c
 2.  Containerização da aplicação com Docker (Nginx).
 3.  Publicação da imagem Docker no **Docker Hub** via GitHub Actions.
 
-## Estrutura do Projeto
+## Estrutura do Projeto / teste
 
 ```
 /
