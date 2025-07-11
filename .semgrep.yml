@@ -1,45 +1,24 @@
 rules:
   # ================================
-  # SQL INJECTION - Comprehensive patterns for production scenarios
+  # SQL INJECTION - Padrões específicos
   # ================================
-  - id: sql-injection-production
-    languages: [javascript, typescript, python, java, php, csharp, go]
+  - id: js-sql-injection-concat
+    languages: [javascript, typescript]
     severity: ERROR
     message: |
       🚨 SQL INJECTION DETECTADA!
-      Query SQL construída dinamicamente com concatenação ou interpolação de dados não sanitizados.
-      Isso permite ataques de injeção SQL. Use prepared statements ou ORMs seguros.
-      
-      ✅ Soluções:
-      - Prepared Statements: db.query("SELECT * FROM users WHERE id = ?", [userId])
-      - ORMs: User.findOne({where: {id: userId}})
-      - Sanitização adequada de entrada
+      Query SQL construída com concatenação de dados não sanitizados.
+      Use prepared statements ou ORMs seguros.
     patterns:
       - pattern-either:
           # Concatenação simples com +
-          - pattern: |
-              $VAR = "..." + $INPUT
-          - pattern: |
-              $VAR = $INPUT + "..."
-          # Template literals JavaScript/TypeScript
-          - pattern: |
-              $VAR = `...${$INPUT}...`
-          # Concatenação Python com f-strings
-          - pattern: |
-              $VAR = f"...{$INPUT}..."
-          # Concatenação Python com %
-          - pattern: |
-              $VAR = "..." % $INPUT
-          # Concatenação Java/C#
-          - pattern: |
-              $VAR = "..." + $INPUT + "..."
-          # String format Python
-          - pattern: |
-              $VAR = "...{}...".format($INPUT)
-          # PHP concatenação
-          - pattern: |
-              $VAR = "..." . $INPUT
-      - pattern-regex: (?i).*(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|UNION|DROP|CREATE|ALTER|EXEC).*
+          - pattern: $VAR = "SELECT * FROM users WHERE id = " + $INPUT
+          - pattern: $VAR = "INSERT INTO users (name) VALUES ('" + $INPUT + "')"
+          # Template literals
+          - pattern: $VAR = `SELECT * FROM accounts WHERE email = '${$INPUT}'`
+          # Padrões gerais de concatenação SQL
+          - pattern: $VAR = "SELECT" + $ANY + $INPUT
+          - pattern: $VAR = "INSERT" + $ANY + $INPUT
 
   # ================================  
   # HARDCODED CREDENTIALS - Specific variable names
