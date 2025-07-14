@@ -34,16 +34,20 @@ jobs:
           echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
           set -e
 
-      - name: 'Generate and Upload Reports'
+      - name: 'Import Scan to DefectDojo'
+        # Este step é executado independentemente de erros no scan,
+        # para garantir que os resultados sejam sempre importados.
+        if: always()
         run: |
-          echo "Gerando relatorio HTML..."
-          python3 scripts/generate_html_report.py semgrep-results.sarif semgrep-report.html
-        
-      - uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-html-report
-          path: semgrep-report.html
-          retention-days: 7
+          # Instala dependências do Python
+          python3 -m pip install --upgrade pip
+          python3 -m pip install requests
+          # Executa o script de importação
+          python3 scripts/import_semgrep_scans.py --report-file semgrep-results.sarif
+        env:
+          DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
+          DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: 'Check for vulnerabilities and fail workflow'
         if: steps.semgrep_scan.outputs.exit_code == '1'
