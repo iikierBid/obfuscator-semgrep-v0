@@ -4,16 +4,25 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Adicionar permissões corretas para o deploy
     permissions:
-      contents: write 
+      contents: read
+      pages: write
+      id-token: write
+
+    # Definir o ambiente de deploy para obter a URL correta
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -29,18 +38,16 @@ jobs:
       - name: Obfuscate code
         run: npm run obfuscate
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # Novo método de deploy
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          publish_branch: gh-pages
-          force_orphan: true
-          cname: ''
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy to GitHub Pages'
-          full_commit_message: 'Deploy to GitHub Pages'
-          # We need to deploy the root index.html and the dist folder
-          # The publish_dir is the root, so we just need to make sure the action includes everything.
-          # The default behavior should be fine. 
+          # Faz o upload do diretório raiz, que agora contém o código ofuscado
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 

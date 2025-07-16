@@ -29,25 +29,25 @@ jobs:
         run: |
           set +e
           docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
-            semgrep scan --config "p/default" --config .semgrep.yml --sarif -o semgrep-results.sarif --error src/
+            semgrep scan --config "p/default" --config .semgrep.yml --sarif -o semgrep-results.sarif --error /src
           SEMGREP_EXIT_CODE=$?
           echo "exit_code=$SEMGREP_EXIT_CODE" >> $GITHUB_OUTPUT
           set -e
 
-      - name: 'Import Scan to DefectDojo'
+      #- name: 'Import Scan to DefectDojo'
         # Este step é executado independentemente de erros no scan,
         # para garantir que os resultados sejam sempre importados.
-        if: always()
-        run: |
+      #  if: always()
+      #  run: |
           # Instala dependências do Python
-          python3 -m pip install --upgrade pip
-          python3 -m pip install requests
+          #python3 -m pip install --upgrade pip
+          #python3 -m pip install requests
           # Executa o script de importação
-          python3 scripts/import_semgrep_scans.py --report-file semgrep-results.sarif
-        env:
-          DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
-          DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          #python3 scripts/import_semgrep_scans.py --report-file semgrep-results.sarif
+        #env:
+        #  DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
+        #  DEFECTDOJO_TOKEN: ${{ secrets.DEFECTDOJO_TOKEN }}
+        #  GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: 'Check for vulnerabilities and fail workflow'
         if: steps.semgrep_scan.outputs.exit_code == '1'
